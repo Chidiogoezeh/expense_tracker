@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 struct Expense {
     id: ExpenseId,
     description: String,
