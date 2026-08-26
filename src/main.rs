@@ -87,6 +87,10 @@ impl ExpenseTracker {
 
         total
     }
+
+    fn find_expense(&self, id: u32) -> Option<&Expense> {
+        self.expenses.iter().find(|expense| expense.id.0 == id)
+    }
 }
 
 fn main() {
