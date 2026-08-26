@@ -33,13 +33,24 @@ impl DisplayExpense for Expense {
     }
 }
 
-fn main() {
-    let expense = Expense::new(
-        ExpenseId(1),
-        String::from("Lunch"),
-        5000.0,
-        String::from("Food"),
-    );
+struct ExpenseTracker {
+    expenses: Vec<Expense>,
+    category_totals: HashMap<String, f64>,
+    next_id: u32,
+}
 
-    expense.display();
+impl ExpenseTracker {
+    fn new() -> ExpenseTracker {
+        ExpenseTracker {
+            expenses: Vec::new(),
+            category_totals: HashMap::new(),
+            next_id: 1,
+        }
+    }
+}
+
+fn main() {
+    let tracker = ExpenseTracker::new();
+
+    println!("Expense tracker created")
 }
