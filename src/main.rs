@@ -33,6 +33,11 @@ impl DisplayExpense for Expense {
     }
 }
 
+#[derive(Debug)]
+enum ExpenseError {
+    InvalidAmount,
+}
+
 struct ExpenseTracker {
     expenses: Vec<Expense>,
     category_totals: HashMap<String, f64>,
@@ -47,10 +52,50 @@ impl ExpenseTracker {
             next_id: 1,
         }
     }
+
+    fn add_expense(
+        &mut self,
+        description: String,
+        amount: f64,
+        category: String,
+    ) -> Result<(), ExpenseError> {
+        if amount <= 0.0 {
+            return Err(ExpenseError::InvalidAmount);
+        }
+
+        let id = ExpenseId(self.next_id);
+
+        let expense = Expense::new(id, description, amount, category.clone());
+
+        self.expenses.push(expense);
+
+        let total = self.category_totals.entry(category).or_insert(0.0);
+
+        *total += amount;
+
+        self.next_id += 1;
+
+        Ok(())
+    }
 }
 
 fn main() {
     let mut tracker = ExpenseTracker::new();
 
-    println!("Expense tracker created")
+    let result = tracker.add_expense(String::from("Lunch"), 5000.0, String::from("Food"));
+
+    match result {
+        Ok(()) => println!("Expense added successfully."),
+        Err(ExpenseError::InvalidAmount) => {
+            println!("Invalid amount.");
+        }
+    }
+
+    println!("Number of expenses: {}", tracker.expenses.len());
+
+    for expense in &tracker.expenses {
+        expense.display();
+    }
+
+    println!("{:?}", tracker.category_totals);
 }
