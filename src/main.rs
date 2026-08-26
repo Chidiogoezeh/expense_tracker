@@ -18,12 +18,17 @@ impl Expense {
     }
 }
 
-enum MenuOption {
-    Add,
-    Delete,
-    Total,
-    List,
-    Exit,
+trait DisplayExpense {
+    fn display(&self);
+}
+
+impl DisplayExpense for Expense {
+    fn display(&self) {
+        println!(
+            "ID: {} | {} | ₦{} | {}",
+            self.id.0, self.description, self.amount, self.category
+        );
+    }
 }
 
 fn main() {
@@ -34,6 +39,5 @@ fn main() {
         String::from("Food"),
     );
 
-    println!("{}", expense.description);
-    println!("{}", expense.amount);
+    expense.display();
 }
