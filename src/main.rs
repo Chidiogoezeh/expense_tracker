@@ -112,4 +112,15 @@ fn main() {
     }
 
     println!("{:?}", tracker.category_totals);
+
+    match tracker.find_expense(1) {
+        Some(expense) => {
+            println!("Expense found:");
+            expense.display();
+        }
+
+        None => {
+            println!("Expense not found.");
+        }
+    }
 }
