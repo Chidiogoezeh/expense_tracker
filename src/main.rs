@@ -77,6 +77,16 @@ impl ExpenseTracker {
 
         Ok(())
     }
+
+    fn calculate_total(&self) -> f64 {
+        let mut total = 0.0;
+
+        for expense in &self.expenses {
+            total += expense.amount;
+        }
+
+        total
+    }
 }
 
 fn main() {
