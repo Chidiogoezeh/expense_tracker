@@ -50,7 +50,7 @@ impl ExpenseTracker {
 }
 
 fn main() {
-    let tracker = ExpenseTracker::new();
+    let mut tracker = ExpenseTracker::new();
 
     println!("Expense tracker created")
 }
