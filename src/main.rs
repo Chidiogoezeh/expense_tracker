@@ -36,6 +36,7 @@ impl DisplayExpense for Expense {
 #[derive(Debug)]
 enum ExpenseError {
     InvalidAmount,
+    ExpenseNotFound,
 }
 
 struct ExpenseTracker {
@@ -88,8 +89,26 @@ impl ExpenseTracker {
         total
     }
 
-    fn find_expense(&self, id: u32) -> Option<&Expense> {
-        self.expenses.iter().find(|expense| expense.id.0 == id)
+    fn delete_expense(&mut self, id: u32) -> Result<(), ExpenseError> {
+        let position = self.expenses.iter().position(|expense| expense.id.0 == id);
+
+        match position {
+            Some(index) => {
+                let expense = self.expenses.remove(index);
+
+                if let Some(total) = self.category_totals.get_mut(&expense.category) {
+                    *total -= expense.amount;
+
+                    if *total <= 0.0 {
+                        self.category_totals.remove(&expense.category);
+                    }
+                }
+
+                Ok(())
+            }
+
+            None => Err(ExpenseError::ExpenseNotFound),
+        }
     }
 }
 
@@ -103,7 +122,12 @@ fn main() {
         Err(ExpenseError::InvalidAmount) => {
             println!("Invalid amount.");
         }
+        Err(ExpenseError::ExpenseNotFound) => {
+            println!("Expense not found.");
+        }
     }
+
+    println!("\nBefore deletion:");
 
     println!("Number of expenses: {}", tracker.expenses.len());
 
@@ -111,16 +135,25 @@ fn main() {
         expense.display();
     }
 
-    println!("{:?}", tracker.category_totals);
+    println!("Category totals: {:?}", tracker.category_totals);
 
-    match tracker.find_expense(1) {
-        Some(expense) => {
-            println!("Expense found:");
-            expense.display();
+    match tracker.delete_expense(1) {
+        Ok(()) => println!("\nExpense deleted successfully."),
+        Err(ExpenseError::InvalidAmount) => {
+            println!("Invalid amount.");
         }
-
-        None => {
+        Err(ExpenseError::ExpenseNotFound) => {
             println!("Expense not found.");
         }
     }
+
+    println!("\nAfter deletion:");
+
+    println!("Number of expenses: {}", tracker.expenses.len());
+
+    for expense in &tracker.expenses {
+        expense.display();
+    }
+
+    println!("Category totals: {:?}", tracker.category_totals);
 }
