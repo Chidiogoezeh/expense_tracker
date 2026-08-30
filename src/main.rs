@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::{self, Write};
 
 struct Expense {
     id: ExpenseId,
@@ -37,6 +38,15 @@ impl DisplayExpense for Expense {
 enum ExpenseError {
     InvalidAmount,
     ExpenseNotFound,
+}
+
+enum MenuOption {
+    Add,
+    Delete,
+    Total,
+    List,
+    Exit,
+    CategoryTotals,
 }
 
 struct ExpenseTracker {
@@ -141,10 +151,85 @@ fn print_menu() {
     println!("6. Category totals");
 }
 
+fn read_input(prompt: &str) -> String {
+    print!("{}", prompt);
+    io::stdout().flush().unwrap();
+
+    let mut input = String::new();
+
+    io::stdin().read_line(&mut input).unwrap();
+
+    input.trim().to_string()
+}
+
+fn read_u32(prompt: &str) -> Result<u32, String> {
+    let input = read_input(prompt);
+
+    input
+        .parse::<u32>()
+        .map_err(|_| String::from("Please enter a valid number."))
+}
+
+fn parse_menu_option(choice: u32) -> Option<MenuOption> {
+    match choice {
+        1 => Some(MenuOption::Add),
+        2 => Some(MenuOption::Delete),
+        3 => Some(MenuOption::Total),
+        4 => Some(MenuOption::List),
+        5 => Some(MenuOption::Exit),
+        6 => Some(MenuOption::CategoryTotals),
+        _ => None,
+    }
+}
+
 fn main() {
     let mut tracker = ExpenseTracker::new();
 
     loop {
         print_menu();
+
+        let choice = match read_u32("Choose an option: ") {
+            Ok(choice) => choice,
+            Err(error) => {
+                println!("{}", error);
+                continue;
+            }
+        };
+
+        let option = match parse_menu_option(choice) {
+            Some(option) => option,
+            None => {
+                println!("Invalid option.");
+                continue;
+            }
+        };
+
+        match option {
+            MenuOption::Add => {
+                println!("Add expense selected.");
+            }
+
+            MenuOption::Delete => {
+                println!("Delete expense selected.");
+            }
+
+            MenuOption::Total => {
+                let total = tracker.calculate_total();
+                println!("Total expenses: ₦{}", total);
+            }
+
+            MenuOption::List => {
+                tracker.list_expenses();
+            }
+
+            MenuOption::Exit => {
+                println!("Goodbye!");
+                break;
+            }
+
+            MenuOption::CategoryTotals => {
+                tracker.show_category_totals();
+            }
+        }
     }
 }
