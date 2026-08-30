@@ -170,6 +170,14 @@ fn read_u32(prompt: &str) -> Result<u32, String> {
         .map_err(|_| String::from("Please enter a valid number."))
 }
 
+fn read_amount(prompt: &str) -> Result<f64, String> {
+    let input = read_input(prompt);
+
+    input
+        .parse::<f64>()
+        .map_err(|_| String::from("Please enter a valid amount."))
+}
+
 fn parse_menu_option(choice: u32) -> Option<MenuOption> {
     match choice {
         1 => Some(MenuOption::Add),
@@ -206,7 +214,31 @@ fn main() {
 
         match option {
             MenuOption::Add => {
-                println!("Add expense selected.");
+                let description = read_input("Description: ");
+
+                let amount = match read_amount("Amount: ") {
+                    Ok(amount) => amount,
+                    Err(error) => {
+                        println!("{}", error);
+                        continue;
+                    }
+                };
+
+                let category = read_input("Category: ");
+
+                match tracker.add_expense(description, amount, category) {
+                    Ok(()) => {
+                        println!("Expense added successfully.");
+                    }
+
+                    Err(ExpenseError::InvalidAmount) => {
+                        println!("Amount must be greater than zero.");
+                    }
+
+                    Err(ExpenseError::ExpenseNotFound) => {
+                        println!("Expense not found.");
+                    }
+                }
             }
 
             MenuOption::Delete => {
