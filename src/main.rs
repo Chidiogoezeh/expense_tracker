@@ -110,6 +110,17 @@ impl ExpenseTracker {
             None => Err(ExpenseError::ExpenseNotFound),
         }
     }
+
+    fn list_expenses(&self) {
+        if self.expenses.is_empty() {
+            println!("No expenses found.");
+            return;
+        }
+
+        for expense in &self.expenses {
+            expense.display();
+        }
+    }
 }
 
 fn main() {
@@ -131,9 +142,7 @@ fn main() {
 
     println!("Number of expenses: {}", tracker.expenses.len());
 
-    for expense in &tracker.expenses {
-        expense.display();
-    }
+    tracker.list_expenses();
 
     println!("Category totals: {:?}", tracker.category_totals);
 
@@ -151,9 +160,7 @@ fn main() {
 
     println!("Number of expenses: {}", tracker.expenses.len());
 
-    for expense in &tracker.expenses {
-        expense.display();
-    }
+    tracker.list_expenses();
 
     println!("Category totals: {:?}", tracker.category_totals);
 }
