@@ -121,46 +121,30 @@ impl ExpenseTracker {
             expense.display();
         }
     }
+
+    fn show_category_totals(&self) {
+        println!("\nCategory totals:");
+
+        for (category, total) in &self.category_totals {
+            println!("{}: ₦{}", category, total);
+        }
+    }
+}
+
+fn print_menu() {
+    println!("\n=== Expense Tracker ===");
+    println!("1. Add expense");
+    println!("2. Delete expense");
+    println!("3. Calculate total");
+    println!("4. List expenses");
+    println!("5. Exit");
+    println!("6. Category totals");
 }
 
 fn main() {
     let mut tracker = ExpenseTracker::new();
 
-    let result = tracker.add_expense(String::from("Lunch"), 5000.0, String::from("Food"));
-
-    match result {
-        Ok(()) => println!("Expense added successfully."),
-        Err(ExpenseError::InvalidAmount) => {
-            println!("Invalid amount.");
-        }
-        Err(ExpenseError::ExpenseNotFound) => {
-            println!("Expense not found.");
-        }
+    loop {
+        print_menu();
     }
-
-    println!("\nBefore deletion:");
-
-    println!("Number of expenses: {}", tracker.expenses.len());
-
-    tracker.list_expenses();
-
-    println!("Category totals: {:?}", tracker.category_totals);
-
-    match tracker.delete_expense(1) {
-        Ok(()) => println!("\nExpense deleted successfully."),
-        Err(ExpenseError::InvalidAmount) => {
-            println!("Invalid amount.");
-        }
-        Err(ExpenseError::ExpenseNotFound) => {
-            println!("Expense not found.");
-        }
-    }
-
-    println!("\nAfter deletion:");
-
-    println!("Number of expenses: {}", tracker.expenses.len());
-
-    tracker.list_expenses();
-
-    println!("Category totals: {:?}", tracker.category_totals);
 }
