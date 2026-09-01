@@ -190,6 +190,58 @@ fn parse_menu_option(choice: u32) -> Option<MenuOption> {
     }
 }
 
+fn handle_add(tracker: &mut ExpenseTracker) {
+    let description = read_input("Description: ");
+
+    let amount = match read_amount("Amount: ") {
+        Ok(amount) => amount,
+        Err(error) => {
+            println!("{}", error);
+            return;
+        }
+    };
+
+    let category = read_input("Category: ");
+
+    match tracker.add_expense(description, amount, category) {
+        Ok(()) => {
+            println!("Expense added successfully.");
+        }
+
+        Err(ExpenseError::InvalidAmount) => {
+            println!("Amount must be greater than zero.");
+        }
+
+        Err(ExpenseError::ExpenseNotFound) => {
+            println!("Expense not found.");
+        }
+    }
+}
+
+fn handle_delete(tracker: &mut ExpenseTracker) {
+    let id = match read_u32("Expense ID: ") {
+        Ok(id) => id,
+        Err(error) => {
+            println!("{}", error);
+            return;
+        }
+    };
+
+    match tracker.delete_expense(id) {
+        Ok(()) => {
+            println!("Expense deleted successfully.");
+        }
+
+        Err(ExpenseError::ExpenseNotFound) => {
+            println!("Expense not found.");
+        }
+
+        Err(ExpenseError::InvalidAmount) => {
+            println!("Invalid amount.");
+        }
+    }
+}
+
 fn main() {
     let mut tracker = ExpenseTracker::new();
 
@@ -214,35 +266,11 @@ fn main() {
 
         match option {
             MenuOption::Add => {
-                let description = read_input("Description: ");
-
-                let amount = match read_amount("Amount: ") {
-                    Ok(amount) => amount,
-                    Err(error) => {
-                        println!("{}", error);
-                        continue;
-                    }
-                };
-
-                let category = read_input("Category: ");
-
-                match tracker.add_expense(description, amount, category) {
-                    Ok(()) => {
-                        println!("Expense added successfully.");
-                    }
-
-                    Err(ExpenseError::InvalidAmount) => {
-                        println!("Amount must be greater than zero.");
-                    }
-
-                    Err(ExpenseError::ExpenseNotFound) => {
-                        println!("Expense not found.");
-                    }
-                }
+                handle_add(&mut tracker);
             }
 
             MenuOption::Delete => {
-                println!("Delete expense selected.");
+                handle_delete(&mut tracker);
             }
 
             MenuOption::Total => {
