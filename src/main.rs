@@ -1,39 +1,6 @@
 use std::collections::HashMap;
 use std::io::{self, Write};
 
-struct Expense {
-    id: ExpenseId,
-    description: String,
-    amount: f64,
-    category: String,
-}
-
-struct ExpenseId(u32);
-
-impl Expense {
-    fn new(id: ExpenseId, description: String, amount: f64, category: String) -> Expense {
-        Expense {
-            id,
-            description,
-            amount,
-            category,
-        }
-    }
-}
-
-trait DisplayExpense {
-    fn display(&self);
-}
-
-impl DisplayExpense for Expense {
-    fn display(&self) {
-        println!(
-            "ID: {} | {} | ₦{} | {}",
-            self.id.0, self.description, self.amount, self.category
-        );
-    }
-}
-
 enum MenuOption {
     Add,
     Delete,
