@@ -42,6 +42,10 @@ fn read_u32(prompt: &str) -> Result<u32, String> {
         .map_err(|_| String::from("Please enter a valid number."))
 }
 
+fn read_id(prompt: &str) -> String {
+    read_input(prompt)
+}
+
 fn read_amount(prompt: &str) -> Result<f64, String> {
     let input = read_input(prompt);
 
