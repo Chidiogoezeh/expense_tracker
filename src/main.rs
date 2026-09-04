@@ -95,15 +95,9 @@ fn handle_add(tracker: &mut ExpenseTracker) {
 }
 
 fn handle_delete(tracker: &mut ExpenseTracker) {
-    let id = match read_u32("Expense ID: ") {
-        Ok(id) => id,
-        Err(error) => {
-            println!("{}", error);
-            return;
-        }
-    };
+    let id = read_id("Expense ID: ");
 
-    match tracker.delete_expense(id) {
+    match tracker.delete_expense(&id) {
         Ok(()) => {
             println!("Expense deleted successfully.");
         }
