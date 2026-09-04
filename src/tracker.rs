@@ -51,7 +51,7 @@ impl ExpenseTracker {
         let position = self
             .expenses
             .iter()
-            .position(|expense| expense.id.0.to_string() == id);
+            .position(|expense| expense.id.as_string() == id);
 
         match position {
             Some(index) => {

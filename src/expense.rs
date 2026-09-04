@@ -6,6 +6,10 @@ impl ExpenseId {
     pub fn new() -> ExpenseId {
         ExpenseId(Uuid::new_v4())
     }
+
+    pub fn as_string(&self) -> String {
+        self.0.to_string()
+    }
 }
 
 pub struct Expense {
