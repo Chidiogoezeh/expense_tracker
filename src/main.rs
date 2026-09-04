@@ -34,12 +34,6 @@ impl DisplayExpense for Expense {
     }
 }
 
-#[derive(Debug)]
-enum ExpenseError {
-    InvalidAmount,
-    ExpenseNotFound,
-}
-
 enum MenuOption {
     Add,
     Delete,
