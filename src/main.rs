@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::io::{self, Write};
 
 use expense_tracker::error::ExpenseError;
