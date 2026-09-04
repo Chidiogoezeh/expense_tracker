@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use std::io::{self, Write};
 
+use expense_tracker::error::ExpenseError;
+use expense_tracker::tracker::ExpenseTracker;
+
 enum MenuOption {
     Add,
     Delete,
