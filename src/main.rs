@@ -10,6 +10,7 @@ enum MenuOption {
     List,
     Exit,
     CategoryTotals,
+    Process,
 }
 
 fn print_menu() {
@@ -20,6 +21,7 @@ fn print_menu() {
     println!("4. List expenses");
     println!("5. Exit");
     println!("6. Category totals");
+    println!("7. Process expenses");
 }
 
 fn read_input(prompt: &str) -> String {
@@ -61,6 +63,7 @@ fn parse_menu_option(choice: u32) -> Option<MenuOption> {
         4 => Some(MenuOption::List),
         5 => Some(MenuOption::Exit),
         6 => Some(MenuOption::CategoryTotals),
+        7 => Some(MenuOption::Process),
         _ => None,
     }
 }
@@ -111,7 +114,8 @@ fn handle_delete(tracker: &mut ExpenseTracker) {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let mut tracker = ExpenseTracker::new();
 
     loop {
@@ -158,6 +162,10 @@ fn main() {
 
             MenuOption::CategoryTotals => {
                 tracker.show_category_totals();
+            }
+
+            MenuOption::Process => {
+                tracker.process_expenses().await;
             }
         }
     }
