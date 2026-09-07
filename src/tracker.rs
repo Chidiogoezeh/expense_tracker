@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use tokio::time::{Duration, sleep};
+
 use crate::error::ExpenseError;
 use crate::expense::{DisplayExpense, Expense};
 
@@ -113,4 +115,8 @@ async fn process_expense(expense: Expense) {
         "Processing: {} - ₦{} - {}",
         expense.description, expense.amount, expense.category
     );
+
+    sleep(Duration::from_secs(1)).await;
+
+    println!("Finished: {}", expense.description);
 }
