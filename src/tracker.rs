@@ -108,6 +108,19 @@ impl ExpenseTracker {
             task.await.unwrap();
         }
     }
+
+    pub async fn process_and_summarize(&self) {
+        self.process_expenses().await;
+
+        println!("\n=== Expense Summary ===");
+
+        let total = self.calculate_total();
+
+        println!("Total expenses: ₦{}", total);
+        println!("Number of expenses: {}", self.expenses.len());
+
+        self.show_category_totals();
+    }
 }
 
 async fn process_expense(expense: Expense) {

@@ -165,7 +165,7 @@ async fn main() {
             }
 
             MenuOption::Process => {
-                tracker.process_expenses().await;
+                tracker.process_and_summarize().await;
             }
         }
     }
