@@ -1,5 +1,6 @@
 use uuid::Uuid;
 
+#[derive(Clone)]
 pub struct ExpenseId(Uuid);
 
 impl ExpenseId {
@@ -12,6 +13,7 @@ impl ExpenseId {
     }
 }
 
+#[derive(Clone)]
 pub struct Expense {
     pub id: ExpenseId,
     pub description: String,
