@@ -90,4 +90,27 @@ impl ExpenseTracker {
             println!("{}: ₦{}", category, total);
         }
     }
+
+    pub async fn process_expenses(&self) {
+        let expenses = self.expenses.clone();
+
+        let mut tasks = Vec::new();
+
+        for expense in expenses {
+            let task = tokio::spawn(async move { process_expense(expense).await });
+
+            tasks.push(task);
+        }
+
+        for task in tasks {
+            task.await.unwrap();
+        }
+    }
+}
+
+async fn process_expense(expense: Expense) {
+    println!(
+        "Processing: {} - ₦{} - {}",
+        expense.description, expense.amount, expense.category
+    );
 }
