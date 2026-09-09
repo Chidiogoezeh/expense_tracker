@@ -20,6 +20,12 @@ struct CreateExpense {
 
 type AppState = Arc<Mutex<ExpenseTracker>>;
 
+async fn get_expenses(State(state): State<AppState>) -> Json<Vec<Expense>> {
+    let tracker = state.lock().await;
+
+    Json(tracker.get_expenses().clone())
+}
+
 enum MenuOption {
     Add,
     Delete,
