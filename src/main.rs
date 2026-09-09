@@ -3,6 +3,13 @@ use std::io::{self, Write};
 use expense_tracker::error::ExpenseError;
 use expense_tracker::tracker::ExpenseTracker;
 
+#[derive(serde::Deserialize)]
+struct CreateExpense {
+    description: String,
+    amount: f64,
+    category: String,
+}
+
 enum MenuOption {
     Add,
     Delete,
