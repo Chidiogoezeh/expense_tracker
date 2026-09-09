@@ -28,12 +28,15 @@ async fn get_expenses(State(state): State<AppState>) -> Json<Vec<Expense>> {
 
 #[tokio::main]
 async fn main() {
+    // Create shared application state
     let state: AppState = Arc::new(Mutex::new(ExpenseTracker::new()));
 
+    // Route -> Handler
     let app = Router::new()
         .route("/expenses", get(get_expenses))
         .with_state(state);
 
+    // Start server
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await
         .unwrap();
