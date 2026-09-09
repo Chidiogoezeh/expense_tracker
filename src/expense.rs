@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize)]
 pub struct ExpenseId(Uuid);
 
 impl ExpenseId {
@@ -13,7 +13,7 @@ impl ExpenseId {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize)]
 pub struct Expense {
     pub id: ExpenseId,
     pub description: String,
