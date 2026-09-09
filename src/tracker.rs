@@ -18,6 +18,10 @@ impl ExpenseTracker {
         }
     }
 
+    pub fn get_expenses(&self) -> &Vec<Expense> {
+        &self.expenses
+    }
+
     pub fn add_expense(
         &mut self,
         description: String,
