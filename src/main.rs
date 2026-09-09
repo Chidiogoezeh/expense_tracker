@@ -1,6 +1,14 @@
-use std::io::{self, Write};
+use std::sync::Arc;
 
-use expense_tracker::error::ExpenseError;
+use axum::{
+    Json, Router,
+    extract::State,
+    routing::{get, post},
+};
+
+use tokio::sync::Mutex;
+
+use expense_tracker::expense::Expense;
 use expense_tracker::tracker::ExpenseTracker;
 
 #[derive(serde::Deserialize)]
@@ -9,6 +17,8 @@ struct CreateExpense {
     amount: f64,
     category: String,
 }
+
+type AppState = Arc<Mutex<ExpenseTracker>>;
 
 enum MenuOption {
     Add,
@@ -123,7 +133,7 @@ fn handle_delete(tracker: &mut ExpenseTracker) {
 
 #[tokio::main]
 async fn main() {
-    let mut tracker = ExpenseTracker::new();
+    let state: AppState = Arc::new(Mutex::new(ExpenseTracker::new()));
 
     loop {
         print_menu();
