@@ -3,11 +3,13 @@ use std::sync::Arc;
 use axum::{
     Json, Router,
     extract::State,
+    http::StatusCode,
     routing::{get, post},
 };
 
 use tokio::sync::Mutex;
 
+use expense_tracker::error::ExpenseError;
 use expense_tracker::expense::Expense;
 use expense_tracker::tracker::ExpenseTracker;
 
@@ -24,6 +26,35 @@ async fn get_expenses(State(state): State<AppState>) -> Json<Vec<Expense>> {
     let tracker = state.lock().await;
 
     Json(tracker.get_expenses().clone())
+}
+
+async fn create_expense(
+    State(state): State<AppState>,
+    Json(input): Json<CreateExpense>,
+) -> Result<(StatusCode, Json<Expense>), (StatusCode, Json<serde_json::Value>)> {
+    let mut tracker = state.lock().await;
+
+    match tracker.add_expense(input.description, input.amount, input.category) {
+        Ok(()) => {
+            let expense = tracker.get_expenses().last().unwrap().clone();
+
+            Ok((StatusCode::CREATED, Json(expense)))
+        }
+
+        Err(ExpenseError::InvalidAmount) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "Amount must be greater than zero"
+            })),
+        )),
+
+        Err(ExpenseError::ExpenseNotFound) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "Expense not found"
+            })),
+        )),
+    }
 }
 
 #[tokio::main]
