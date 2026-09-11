@@ -100,6 +100,7 @@ async fn main() {
         .route("/expenses", get(get_expenses))
         .route("/expenses", post(create_expense))
         .route("/expenses/{id}", delete(delete_expense))
+        .route("/expenses/total", get(get_total))
         .with_state(state);
 
     // Start server
