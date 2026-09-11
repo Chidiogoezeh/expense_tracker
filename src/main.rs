@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use axum::{
     Json, Router,
@@ -88,6 +88,12 @@ async fn get_total(State(state): State<AppState>) -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "total": tracker.calculate_total()
     }))
+}
+
+async fn get_category_totals(State(state): State<AppState>) -> Json<HashMap<String, f64>> {
+    let tracker = state.lock().await;
+
+    Json(tracker.get_category_totals().clone())
 }
 
 #[tokio::main]
