@@ -57,6 +57,31 @@ async fn create_expense(
     }
 }
 
+async fn delete_expense(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
+    let mut tracker = state.lock().await;
+
+    match tracker.delete_expense(&id) {
+        Ok(()) => Ok(StatusCode::NO_CONTENT),
+
+        Err(ExpenseError::ExpenseNotFound) => Err((
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "error": "Expense not found"
+            })),
+        )),
+
+        Err(ExpenseError::InvalidAmount) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "Invalid amount"
+            })),
+        )),
+    }
+}
+
 #[tokio::main]
 async fn main() {
     // Create shared application state
