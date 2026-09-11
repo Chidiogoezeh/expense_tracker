@@ -82,6 +82,14 @@ async fn delete_expense(
     }
 }
 
+async fn get_total(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let tracker = state.lock().await;
+
+    Json(serde_json::json!({
+        "total": tracker.calculate_total()
+    }))
+}
+
 #[tokio::main]
 async fn main() {
     // Create shared application state
@@ -91,6 +99,7 @@ async fn main() {
     let app = Router::new()
         .route("/expenses", get(get_expenses))
         .route("/expenses", post(create_expense))
+        .route("/expenses/{id}", delete(delete_expense))
         .with_state(state);
 
     // Start server
