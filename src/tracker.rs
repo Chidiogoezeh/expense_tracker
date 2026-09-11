@@ -18,6 +18,10 @@ impl ExpenseTracker {
         }
     }
 
+    pub fn get_category_totals(&self) -> &HashMap<String, f64> {
+        &self.category_totals
+    }
+
     pub fn get_expenses(&self) -> &Vec<Expense> {
         &self.expenses
     }
