@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use axum::{
     Json, Router,
-    extract::State,
+    extract::{Path, State},
     http::StatusCode,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 
 use tokio::sync::Mutex;
@@ -62,9 +62,10 @@ async fn main() {
     // Create shared application state
     let state: AppState = Arc::new(Mutex::new(ExpenseTracker::new()));
 
-    // Route -> Handler
+    // Routes -> Handlers
     let app = Router::new()
         .route("/expenses", get(get_expenses))
+        .route("/expenses", post(create_expense))
         .with_state(state);
 
     // Start server
