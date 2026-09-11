@@ -107,6 +107,7 @@ async fn main() {
         .route("/expenses", post(create_expense))
         .route("/expenses/{id}", delete(delete_expense))
         .route("/expenses/total", get(get_total))
+        .route("/expenses/categories", get(get_category_totals))
         .with_state(state);
 
     // Start server
