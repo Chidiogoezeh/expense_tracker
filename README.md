@@ -1,20 +1,40 @@
-# Expense Tracker CLI
+# Expense Tracker API
 
-A simple command-line expense tracker built with **Rust** as part of my 12-Week Rust Backend Learning Roadmap.
+A RESTful **Expense Tracker API built with Rust**, evolved from a command-line application into a backend API as part of my **12-Week Rust Backend Learning Roadmap**.
 
-## Features
+The project started as a simple CLI application during Weeks 1–3 and was progressively expanded as I learned more Rust and backend development concepts through Week 6.
 
-- Add an expense
-- Delete an expense
+## Project Evolution
+
+This project reflects my progression through the first six weeks of the roadmap:
+
+- **Week 1:** Rust fundamentals — variables, mutability, data types, functions, ownership, borrowing, references, and shadowing.
+- **Week 2:** Structs, tuple structs, enums, `match`, `impl` blocks, and traits.
+- **Week 3:** `Vec`, `HashMap`, `Option`, `Result`, and custom error handling.
+- **Week 4:** Cargo, packages, crates, modules, visibility, and external crates.
+- **Week 5:** Asynchronous Rust, futures, `async`/`await`, Tokio, and asynchronous tasks.
+- **Week 6:** REST APIs, HTTP routes, handlers, JSON, and HTTP status codes.
+
+The project's Git commit history shows this progression from the original **Expense Tracker CLI** to the current **Expense Tracker API**.
+
+## Current Features
+
+- Create expenses
+- Delete expenses
+- List expenses
 - Calculate total expenses
-- List all expenses
 - View expenses by category
-- Validate user input
-- Handle errors with custom error types
+- JSON request and response handling
+- HTTP routing
+- HTTP handlers
+- HTTP status codes
+- Input validation
+- Error handling
+- Asynchronous request handling
 
-## Rust Concepts Practiced
+## Rust & Backend Concepts Practiced
 
-### Week 1
+### Rust Fundamentals
 
 - Variables
 - Mutability
@@ -25,7 +45,7 @@ A simple command-line expense tracker built with **Rust** as part of my 12-Week 
 - References
 - Shadowing
 
-### Week 2
+### Rust Data Modeling
 
 - Structs
 - Tuple structs
@@ -34,13 +54,76 @@ A simple command-line expense tracker built with **Rust** as part of my 12-Week 
 - `impl` blocks
 - Traits
 
-### Week 3
+### Collections & Error Handling
 
 - `Vec`
 - `HashMap`
 - `Option`
 - `Result`
-- Custom errors
+- Custom error types
+
+### Project & Module Organization
+
+- Cargo
+- Packages
+- Crates
+- Modules
+- Visibility
+- External crates
+
+### Asynchronous Rust
+
+- Futures
+- `async`
+- `await`
+- Tokio
+- Asynchronous tasks
+
+### REST API Development
+
+- HTTP methods
+- Routes
+- Handlers
+- JSON serialization
+- JSON deserialization
+- HTTP status codes
+- Request handling
+- Response handling
+
+## API
+
+The Expense Tracker is now exposed through a REST API instead of only running as a command-line application.
+
+Example endpoints:
+
+```text
+GET    /expenses
+POST   /expenses
+DELETE /expenses/:id
+GET    /expenses/total
+GET    /expenses/category/:category
+```
+
+Example JSON request:
+
+```json
+{
+  "description": "Lunch",
+  "amount": 5000,
+  "category": "Food"
+}
+```
+
+Example JSON response:
+
+```json
+{
+  "id": 1,
+  "description": "Lunch",
+  "amount": 5000,
+  "category": "Food"
+}
+```
 
 ## Project Structure
 
@@ -50,6 +133,8 @@ expense_tracker/
 └── src/
     └── main.rs
 ```
+
+> The project structure will continue to evolve as the application moves toward a more production-style backend architecture.
 
 ## How to Run
 
@@ -73,41 +158,51 @@ Run the application:
 cargo run
 ```
 
-## Example
+The API will be available at:
 
 ```text
-=== Expense Tracker ===
-1. Add expense
-2. Delete expense
-3. Calculate total
-4. List expenses
-5. Exit
-6. Category totals
-
-Choose an option: 1
-
-Description: Lunch
-Amount: 5000
-Category: Food
-
-Expense added successfully.
+http://127.0.0.1:3000
 ```
+
+## Example
+
+Create an expense:
+
+```http
+POST /expenses
+Content-Type: application/json
+```
+
+```json
+{
+  "description": "Lunch",
+  "amount": 5000,
+  "category": "Food"
+}
+```
+
+The API returns the appropriate HTTP status code and JSON response.
 
 ## Learning Goal
 
-The purpose of this project is to practice Rust fundamentals and Week 3 data structures and error handling by building a small, functional CLI application.
+The goal of this project is to apply the concepts learned throughout the first six weeks of my Rust backend journey by continuously improving the same application.
+
+Rather than building a separate project for every concept, I am using the Expense Tracker to demonstrate how a small Rust application can evolve from a **CLI program into a RESTful backend API**.
 
 ## Future Improvements
 
-Possible improvements for later weeks:
+As I progress through the remaining weeks of the roadmap, I plan to add:
 
-- Save expenses to a file
-- Use PostgreSQL
-- Build a REST API
-- Add authentication
-- Add automated tests
-- Containerize with Docker
-- Deploy the application
+- PostgreSQL database integration
+- SQLx
+- Authentication and authorization
+- Request validation
+- Structured logging
+- Production-style project architecture
+- Automated tests
+- Docker and Docker Compose
+- API documentation
+- Deployment
 
 ---
 
