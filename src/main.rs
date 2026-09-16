@@ -1,5 +1,3 @@
-use std::{collections::HashMap, sync::Arc};
-
 use axum::{
     Json, Router,
     extract::{Path, State},
@@ -7,11 +5,10 @@ use axum::{
     routing::{delete, get, post},
 };
 
-use tokio::sync::Mutex;
+use sqlx::{PgPool, postgres::PgPoolOptions};
 
 use expense_tracker::error::ExpenseError;
 use expense_tracker::expense::Expense;
-use expense_tracker::tracker::ExpenseTracker;
 
 #[derive(serde::Deserialize)]
 struct CreateExpense {
@@ -19,8 +16,6 @@ struct CreateExpense {
     amount: f64,
     category: String,
 }
-
-type AppState = Arc<Mutex<ExpenseTracker>>;
 
 async fn get_expenses(State(state): State<AppState>) -> Json<Vec<Expense>> {
     let tracker = state.lock().await;
@@ -99,7 +94,13 @@ async fn get_category_totals(State(state): State<AppState>) -> Json<HashMap<Stri
 #[tokio::main]
 async fn main() {
     // Create shared application state
-    let state: AppState = Arc::new(Mutex::new(ExpenseTracker::new()));
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+        .unwrap();
 
     // Routes -> Handlers
     let app = Router::new()
@@ -108,7 +109,7 @@ async fn main() {
         .route("/expenses/{id}", delete(delete_expense))
         .route("/expenses/total", get(get_total))
         .route("/expenses/categories", get(get_category_totals))
-        .with_state(state);
+        .with_state(pool);
 
     // Start server
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
