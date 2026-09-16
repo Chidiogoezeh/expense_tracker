@@ -11,6 +11,10 @@ impl ExpenseId {
     pub fn as_string(&self) -> String {
         self.0.to_string()
     }
+
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
+    }
 }
 
 #[derive(Clone, serde::Serialize)]
