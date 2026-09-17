@@ -8,9 +8,6 @@ use axum::{
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use uuid::Uuid;
 
-use expense_tracker::error::ExpenseError;
-use expense_tracker::expense::Expense;
-
 #[derive(serde::Deserialize)]
 struct CreateExpense {
     description: String,
