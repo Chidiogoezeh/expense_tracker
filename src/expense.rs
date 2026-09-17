@@ -17,6 +17,12 @@ impl ExpenseId {
     }
 }
 
+impl Default for ExpenseId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone, serde::Serialize)]
 pub struct Expense {
     pub id: ExpenseId,
