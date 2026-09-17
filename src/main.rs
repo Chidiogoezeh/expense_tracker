@@ -34,32 +34,31 @@ async fn get_expenses(State(pool): State<PgPool>) -> Result<Json<Vec<ExpenseRow>
 }
 
 async fn create_expense(
-    State(state): State<AppState>,
+    State(pool): State<PgPool>,
     Json(input): Json<CreateExpense>,
-) -> Result<(StatusCode, Json<Expense>), (StatusCode, Json<serde_json::Value>)> {
-    let mut tracker = state.lock().await;
-
-    match tracker.add_expense(input.description, input.amount, input.category) {
-        Ok(()) => {
-            let expense = tracker.get_expenses().last().unwrap().clone();
-
-            Ok((StatusCode::CREATED, Json(expense)))
-        }
-
-        Err(ExpenseError::InvalidAmount) => Err((
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({
-                "error": "Amount must be greater than zero"
-            })),
-        )),
-
-        Err(ExpenseError::ExpenseNotFound) => Err((
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({
-                "error": "Expense not found"
-            })),
-        )),
+) -> Result<(StatusCode, Json<ExpenseRow>), StatusCode> {
+    if input.amount <= 0.0 {
+        return Err(StatusCode::BAD_REQUEST);
     }
+
+    let id = Uuid::new_v4();
+
+    let expense = sqlx::query_as::<_, ExpenseRow>(
+        r#"
+        INSERT INTO expenses (id, description, amount, category)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, description, amount, category
+        "#,
+    )
+    .bind(id)
+    .bind(input.description)
+    .bind(input.amount)
+    .bind(input.category)
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok((StatusCode::CREATED, Json(expense)))
 }
 
 async fn delete_expense(
