@@ -6,6 +6,7 @@ use axum::{
 };
 
 use sqlx::{PgPool, postgres::PgPoolOptions};
+use uuid::Uuid;
 
 use expense_tracker::error::ExpenseError;
 use expense_tracker::expense::Expense;
@@ -17,10 +18,22 @@ struct CreateExpense {
     category: String,
 }
 
-async fn get_expenses(State(state): State<AppState>) -> Json<Vec<Expense>> {
-    let tracker = state.lock().await;
+#[derive(Debug, serde::Serialize, sqlx::FromRow)]
+struct ExpenseRow {
+    id: Uuid,
+    description: String,
+    amount: f64,
+    category: String,
+}
 
-    Json(tracker.get_expenses().clone())
+async fn get_expenses(State(pool): State<PgPool>) -> Result<Json<Vec<ExpenseRow>>, StatusCode> {
+    let expenses =
+        sqlx::query_as::<_, ExpenseRow>("SELECT id, description, amount, category FROM expenses")
+            .fetch_all(&pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(expenses))
 }
 
 async fn create_expense(
