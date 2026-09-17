@@ -23,6 +23,11 @@ struct ExpenseRow {
     category: String,
 }
 
+#[derive(sqlx::FromRow)]
+struct TotalResult {
+    total: f64,
+}
+
 async fn get_expenses(State(pool): State<PgPool>) -> Result<Json<Vec<ExpenseRow>>, StatusCode> {
     let expenses =
         sqlx::query_as::<_, ExpenseRow>("SELECT id, description, amount, category FROM expenses")
@@ -78,12 +83,17 @@ async fn delete_expense(
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn get_total(State(state): State<AppState>) -> Json<serde_json::Value> {
-    let tracker = state.lock().await;
+async fn get_total(State(pool): State<PgPool>) -> Result<Json<serde_json::Value>, StatusCode> {
+    let result = sqlx::query_as::<_, TotalResult>(
+        "SELECT COALESCE(SUM(amount), 0.0) AS total FROM expenses",
+    )
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Json(serde_json::json!({
-        "total": tracker.calculate_total()
-    }))
+    Ok(Json(serde_json::json!({
+        "total": result.total
+    })))
 }
 
 async fn get_category_totals(State(state): State<AppState>) -> Json<HashMap<String, f64>> {
