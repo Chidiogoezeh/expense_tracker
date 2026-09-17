@@ -62,28 +62,20 @@ async fn create_expense(
 }
 
 async fn delete_expense(
-    State(state): State<AppState>,
-    Path(id): Path<String>,
-) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    let mut tracker = state.lock().await;
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, StatusCode> {
+    let result = sqlx::query("DELETE FROM expenses WHERE id = $1")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    match tracker.delete_expense(&id) {
-        Ok(()) => Ok(StatusCode::NO_CONTENT),
-
-        Err(ExpenseError::ExpenseNotFound) => Err((
-            StatusCode::NOT_FOUND,
-            Json(serde_json::json!({
-                "error": "Expense not found"
-            })),
-        )),
-
-        Err(ExpenseError::InvalidAmount) => Err((
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({
-                "error": "Invalid amount"
-            })),
-        )),
+    if result.rows_affected() == 0 {
+        return Err(StatusCode::NOT_FOUND);
     }
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn get_total(State(state): State<AppState>) -> Json<serde_json::Value> {
