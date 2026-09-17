@@ -28,6 +28,12 @@ struct TotalResult {
     total: f64,
 }
 
+#[derive(serde::Serialize, sqlx::FromRow)]
+struct CategoryTotal {
+    category: String,
+    total: f64,
+}
+
 async fn get_expenses(State(pool): State<PgPool>) -> Result<Json<Vec<ExpenseRow>>, StatusCode> {
     let expenses =
         sqlx::query_as::<_, ExpenseRow>("SELECT id, description, amount, category FROM expenses")
@@ -96,10 +102,21 @@ async fn get_total(State(pool): State<PgPool>) -> Result<Json<serde_json::Value>
     })))
 }
 
-async fn get_category_totals(State(state): State<AppState>) -> Json<HashMap<String, f64>> {
-    let tracker = state.lock().await;
+async fn get_category_totals(
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<CategoryTotal>>, StatusCode> {
+    let totals = sqlx::query_as::<_, CategoryTotal>(
+        r#"
+        SELECT category, SUM(amount) AS total
+        FROM expenses
+        GROUP BY category
+        "#,
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Json(tracker.get_category_totals().clone())
+    Ok(Json(totals))
 }
 
 #[tokio::main]
