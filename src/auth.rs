@@ -30,3 +30,12 @@ pub struct Claims {
     pub sub: String,
     pub exp: u64,
 }
+
+fn hash_password(password: &str) -> Result<String, StatusCode> {
+    let password_hash = Argon2::default()
+        .hash_password(password.as_bytes())
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .to_string;
+
+    Ok(password_hash)
+}
