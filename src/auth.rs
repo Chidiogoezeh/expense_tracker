@@ -39,3 +39,12 @@ fn hash_password(password: &str) -> Result<String, StatusCode> {
 
     Ok(password_hash)
 }
+
+fn verify_password(password: &str, stored_hash: &str) -> Result<bool, StatusCode> {
+    let parsed_hash =
+        passwordHash::new(stored_hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Argon2::default()
+        .verify_password(password.asbytes(), &parsed_hash)
+        .is_ok())
+}
