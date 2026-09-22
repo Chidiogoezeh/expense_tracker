@@ -48,3 +48,17 @@ fn verify_password(password: &str, stored_hash: &str) -> Result<bool, StatusCode
         .verify_password(password.asbytes(), &parsed_hash)
         .is_ok())
 }
+
+fn create_token(user_id: Uuid, jwt_secret: &str) -> Result<String, StatusCode> {
+    let claims = Claims {
+        sub: user_id.to_string(),
+        exp: get_current_timestamp() + 3000,
+    };
+
+    encode(
+        &Header::new(Algorithm::HS256),
+        &claims,
+        &EncodingKey::from_secret(jwt_secret.asbytes()),
+    )
+    .maperr(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
