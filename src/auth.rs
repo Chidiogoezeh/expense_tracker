@@ -112,3 +112,41 @@ pub async fn register(
         }),
     ))
 }
+
+#[derive(Serialize)]
+pub struct LoginResponse {
+    pub token: String,
+}
+
+pub async fn login(
+    State(state): State<AppState>,
+    Json(input): Json<LoginRequest>,
+) -> Result<Json<LoginResponse>, StatusCode> {
+    let email = input.email.trim().to_lowercase();
+
+    let user = sqlx::query!(
+        r#"
+        SELECT id, password_hash
+        FROM users
+        WHERE email = $1
+        "#,
+        email
+    )
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let Some(user) = user else {
+        return Err(StatusCode::UNAUTHORIZED);
+    };
+
+    let valid = verify_password(&input.password, &user.password_hash)?;
+
+    if !valid {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    let token = create_token(user.id, &state.jwt_secret)?;
+
+    Ok(Json(LoginResponse { token }))
+}
