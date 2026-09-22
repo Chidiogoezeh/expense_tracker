@@ -12,3 +12,21 @@ use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier},
 };
+
+#[derive(Deserialize)]
+pub struct RegisterRequest {
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Deserialize)]
+pub struct LoginRequest {
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Debug, Serialize, Desirialize)]
+pub struct Claims {
+    pub sub: String,
+    pub exp: u64,
+}
