@@ -139,6 +139,8 @@ async fn main() {
         .await
         .unwrap();
 
+    let state = AppState { pool, jwt_secret };
+
     // Routes -> Handlers
     let app = Router::new()
         .route("/expenses", get(get_expenses))
