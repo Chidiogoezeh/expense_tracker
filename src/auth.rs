@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use argon2::{
     Argon2,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier},
+    password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
 };
 
 use crate::{AppState, middleware::AuthUser};
