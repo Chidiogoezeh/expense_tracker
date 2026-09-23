@@ -51,6 +51,14 @@ impl Expense {
     }
 }
 
+#[derive(Debug, serde::Serialize, sqlx::FromRow)]
+pub struct ExpenseRow {
+    pub id: Uuid,
+    pub description: String,
+    pub amount: f64,
+    pub category: String,
+}
+
 pub trait DisplayExpense {
     fn display(&self);
 }
