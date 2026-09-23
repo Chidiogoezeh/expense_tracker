@@ -51,7 +51,7 @@ async fn get_expenses(State(state): State<AppState>) -> Result<Json<Vec<ExpenseR
 }
 
 async fn create_expense(
-    State(pool): State<PgPool>,
+    State(state): State<PgPool>,
     Json(input): Json<CreateExpense>,
 ) -> Result<(StatusCode, Json<ExpenseRow>), StatusCode> {
     if input.amount <= 0.0 {
@@ -71,7 +71,7 @@ async fn create_expense(
     .bind(input.description)
     .bind(input.amount)
     .bind(input.category)
-    .fetch_one(&pool)
+    .fetch_one(&state.pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
