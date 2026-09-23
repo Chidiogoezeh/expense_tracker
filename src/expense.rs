@@ -178,3 +178,29 @@ pub async fn get_total(
         "total": result.total
     })))
 }
+
+#[derive(serde::Serialize, sqlx::FromRow)]
+pub struct CategoryTotal {
+    pub category: String,
+    pub total: f64,
+}
+
+pub async fn get_category_totals(
+    State(state): State<AppState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> Result<Json<Vec<CategoryTotal>>, StatusCode> {
+    let totals = sqlx::query_as::<_, CategoryTotal>(
+        r#"
+        SELECT category, SUM(amount) AS total
+        FROM expenses
+        WHERE user_id = $1
+        GROUP BY category
+        "#,
+    )
+    .bind(auth_user.id)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(totals))
+}
