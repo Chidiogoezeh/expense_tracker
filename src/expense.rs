@@ -152,3 +152,29 @@ pub async fn delete_expense(
 
     Ok(StatusCode::NO_CONTENT)
 }
+
+#[derive(sqlx::FromRow)]
+pub struct TotalResult {
+    pub total: f64,
+}
+
+pub async fn get_total(
+    State(state): State<AppState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let result = sqlx::query_as::<_, TotalResult>(
+        r#"
+        SELECT COALESCE(SUM(amount), 0.0) AS total
+        FROM expenses
+        WHERE user_id = $1
+        "#,
+    )
+    .bind(auth_user.id)
+    .fetch_one(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(serde_json::json!({
+        "total": result.total
+    })))
+}
