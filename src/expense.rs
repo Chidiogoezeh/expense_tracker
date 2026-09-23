@@ -79,6 +79,36 @@ impl DisplayExpense for Expense {
     }
 }
 
+pub async fn create_expense(
+    State(state): State<AppState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(input): Json<CreateExpense>,
+) -> Result<(StatusCode, Json<ExpenseRow>), StatusCode> {
+    if input.amount <= 0.0 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let expense = sqlx::query_as::<_, ExpenseRow>(
+        r#"
+        INSERT INTO expenses
+            (id, user_id, description, amount, category)
+        VALUES
+            ($1, $2, $3, $4, $5)
+        RETURNING id, description, amount, category
+        "#,
+    )
+    .bind(Uuid::new_v4())
+    .bind(auth_user.id)
+    .bind(input.description)
+    .bind(input.amount)
+    .bind(input.category)
+    .fetch_one(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok((StatusCode::CREATED, Json(expense)))
+}
+
 pub async fn get_expenses(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
