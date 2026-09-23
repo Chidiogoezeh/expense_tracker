@@ -152,3 +152,23 @@ pub async fn login(
 
     Ok(Json(LoginResponse { token }))
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: String,
+    pub exp: u64,
+}
+
+fn create_token(user_id: Uuid, jwt_secret: &str) -> Result<String, StatusCode> {
+    let claims = Claims {
+        sub: user_id.to_string(),
+        exp: get_current_timestamp() + 3600,
+    };
+
+    encode(
+        &Header::new(Algorithm::HS256),
+        &claims,
+        &EncodingKey::from_secret(jwt_secret.as_bytes()),
+    )
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
