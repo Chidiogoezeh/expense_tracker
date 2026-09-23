@@ -4,131 +4,16 @@ mod expense;
 mod middleware;
 
 use axum::{
-    Json, Router,
-    extract::{Path, State},
-    http::StatusCode,
-    middleware as axum_middleware,
+    Router, middleware as axum_middleware,
     routing::{delete, get, post},
 };
 
 use sqlx::{PgPool, postgres::PgPoolOptions};
-use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
     pub jwt_secret: String,
-}
-
-#[derive(serde::Deserialize)]
-struct CreateExpense {
-    description: String,
-    amount: f64,
-    category: String,
-}
-
-#[derive(Debug, serde::Serialize, sqlx::FromRow)]
-struct ExpenseRow {
-    id: Uuid,
-    description: String,
-    amount: f64,
-    category: String,
-}
-
-#[derive(sqlx::FromRow)]
-struct TotalResult {
-    total: f64,
-}
-
-#[derive(serde::Serialize, sqlx::FromRow)]
-struct CategoryTotal {
-    category: String,
-    total: f64,
-}
-
-async fn get_expenses(State(state): State<AppState>) -> Result<Json<Vec<ExpenseRow>>, StatusCode> {
-    let expenses =
-        sqlx::query_as::<_, ExpenseRow>("SELECT id, description, amount, category FROM expenses")
-            .fetch_all(&state.pool)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(Json(expenses))
-}
-
-async fn create_expense(
-    State(state): State<AppState>,
-    Json(input): Json<CreateExpense>,
-) -> Result<(StatusCode, Json<ExpenseRow>), StatusCode> {
-    if input.amount <= 0.0 {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    let id = Uuid::new_v4();
-
-    let expense = sqlx::query_as::<_, ExpenseRow>(
-        r#"
-        INSERT INTO expenses (id, description, amount, category)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, description, amount, category
-        "#,
-    )
-    .bind(id)
-    .bind(input.description)
-    .bind(input.amount)
-    .bind(input.category)
-    .fetch_one(&state.pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok((StatusCode::CREATED, Json(expense)))
-}
-
-async fn delete_expense(
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-) -> Result<StatusCode, StatusCode> {
-    let result = sqlx::query("DELETE FROM expenses WHERE id = $1")
-        .bind(id)
-        .execute(&state.pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    if result.rows_affected() == 0 {
-        return Err(StatusCode::NOT_FOUND);
-    }
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
-async fn get_total(State(state): State<AppState>) -> Result<Json<serde_json::Value>, StatusCode> {
-    let result = sqlx::query_as::<_, TotalResult>(
-        "SELECT COALESCE(SUM(amount), 0.0) AS total FROM expenses",
-    )
-    .fetch_one(&state.pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(Json(serde_json::json!({
-        "total": result.total
-    })))
-}
-
-async fn get_category_totals(
-    State(state): State<AppState>,
-) -> Result<Json<Vec<CategoryTotal>>, StatusCode> {
-    let totals = sqlx::query_as::<_, CategoryTotal>(
-        r#"
-        SELECT category, SUM(amount) AS total
-        FROM expenses
-        GROUP BY category
-        "#,
-    )
-    .fetch_all(&state.pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(Json(totals))
 }
 
 #[tokio::main]
@@ -148,18 +33,23 @@ async fn main() {
     let state = AppState { pool, jwt_secret };
 
     // Protected routes
-    let protected_routes = Router::new().route("/profile", get(auth::profile)).layer(
-        axum_middleware::from_fn_with_state(state.clone(), middleware::auth_middleware),
-    );
+    let protected_routes = Router::new()
+        .route("/profile", get(auth::profile))
+        .route("/expenses", get(expense::get_expenses))
+        .route("/expenses", post(expense::create_expense))
+        .route("/expenses/{id}", delete(expense::delete_expense))
+        .route("/expenses/total", get(expense::get_total))
+        .route("/expenses/categories", get(expense::get_category_totals))
+        .layer(axum_middleware::from_fn_with_state(
+            state.clone(),
+            middleware::auth_middleware,
+        ));
 
-    // Routes -> Handlers
+    // Public routes
     let app = Router::new()
+        .route("/register", post(auth::register))
+        .route("/login", post(auth::login))
         .merge(protected_routes)
-        .route("/expenses", get(get_expenses))
-        .route("/expenses", post(create_expense))
-        .route("/expenses/{id}", delete(delete_expense))
-        .route("/expenses/total", get(get_total))
-        .route("/expenses/categories", get(get_category_totals))
         .with_state(state);
 
     // Start server
