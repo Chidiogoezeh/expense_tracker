@@ -13,6 +13,8 @@ use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier},
 };
 
+use crate::AppState;
+
 #[derive(Deserialize)]
 pub struct RegisterRequest {
     pub email: String,
