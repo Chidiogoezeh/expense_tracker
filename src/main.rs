@@ -148,7 +148,7 @@ async fn main() {
         .route("/expenses/{id}", delete(delete_expense))
         .route("/expenses/total", get(get_total))
         .route("/expenses/categories", get(get_category_totals))
-        .with_state(pool);
+        .with_state(state);
 
     // Start server
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
