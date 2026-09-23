@@ -51,6 +51,13 @@ impl Expense {
     }
 }
 
+#[derive(serde::Deserialize)]
+pub struct CreateExpense {
+    pub description: String,
+    pub amount: f64,
+    pub category: String,
+}
+
 #[derive(Debug, serde::Serialize, sqlx::FromRow)]
 pub struct ExpenseRow {
     pub id: Uuid,
