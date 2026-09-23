@@ -95,11 +95,11 @@ async fn delete_expense(
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn get_total(State(pool): State<PgPool>) -> Result<Json<serde_json::Value>, StatusCode> {
+async fn get_total(State(state): State<AppState>) -> Result<Json<serde_json::Value>, StatusCode> {
     let result = sqlx::query_as::<_, TotalResult>(
         "SELECT COALESCE(SUM(amount), 0.0) AS total FROM expenses",
     )
-    .fetch_one(&pool)
+    .fetch_one(&state.pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
