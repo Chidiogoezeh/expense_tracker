@@ -127,3 +127,28 @@ pub async fn get_expenses(
 
     Ok(Json(expenses))
 }
+
+pub async fn delete_expense(
+    State(state): State<AppState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, StatusCode> {
+    let result = sqlx::query(
+        r#"
+        DELETE FROM expenses
+        WHERE id = $1
+        AND user_id = $2
+        "#,
+    )
+    .bind(id)
+    .bind(auth_user.id)
+    .execute(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if result.rows_affected() == 0 {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
