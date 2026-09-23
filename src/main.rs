@@ -1,3 +1,8 @@
+mod auth;
+mod error;
+mod expense;
+mod middleware;
+
 use axum::{
     Json, Router,
     extract::{Path, State},
