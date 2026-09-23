@@ -51,7 +51,7 @@ async fn get_expenses(State(state): State<AppState>) -> Result<Json<Vec<ExpenseR
 }
 
 async fn create_expense(
-    State(state): State<PgPool>,
+    State(state): State<AppState>,
     Json(input): Json<CreateExpense>,
 ) -> Result<(StatusCode, Json<ExpenseRow>), StatusCode> {
     if input.amount <= 0.0 {
@@ -79,12 +79,12 @@ async fn create_expense(
 }
 
 async fn delete_expense(
-    State(pool): State<PgPool>,
+    State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, StatusCode> {
     let result = sqlx::query("DELETE FROM expenses WHERE id = $1")
         .bind(id)
-        .execute(&pool)
+        .execute(&state.pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
