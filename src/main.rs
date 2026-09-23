@@ -7,6 +7,7 @@ use axum::{
     Json, Router,
     extract::{Path, State},
     http::StatusCode,
+    middleware as axum_middleware,
     routing::{delete, get, post},
 };
 
@@ -146,8 +147,14 @@ async fn main() {
 
     let state = AppState { pool, jwt_secret };
 
+    // Protected routes
+    let protected_routes = Router::new().route("/profile", get(auth::profile)).layer(
+        axum_middleware::from_fn_with_state(state.clone(), middleware::auth_middleware),
+    );
+
     // Routes -> Handlers
     let app = Router::new()
+        .merge(protected_routes)
         .route("/expenses", get(get_expenses))
         .route("/expenses", post(create_expense))
         .route("/expenses/{id}", delete(delete_expense))

@@ -1,19 +1,21 @@
-use axum::{Json, extract::State, http::StausCode};
-
-use jsonwebtoken::{
-    Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode, get_current_timestamp,
+use axum::{
+    Json,
+    extract::{Extension, State},
+    http::StatusCode,
 };
 
-use serde::{Serialize, Seseialize};
-use sqlx::PgPool;
+use jsonwebtoken::{Algorithm, EncodingKey, Header, encode, get_current_timestamp};
+
+use serde::{Deserialize, Serialize};
+
 use uuid::Uuid;
 
 use argon2::{
     Argon2,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier},
+    password_hash::{PasswordHasher, PasswordVerifier},
 };
 
-use crate::AppState;
+use crate::{AppState, middleware::AuthUser};
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {
@@ -27,7 +29,7 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-#[derive(Debug, Serialize, Desirialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: String,
     pub exp: u64,
@@ -44,10 +46,10 @@ fn hash_password(password: &str) -> Result<String, StatusCode> {
 
 fn verify_password(password: &str, stored_hash: &str) -> Result<bool, StatusCode> {
     let parsed_hash =
-        passwordHash::new(stored_hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        PasswordHash::new(stored_hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Argon2::default()
-        .verify_password(password.asbytes(), &parsed_hash)
+        .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok())
 }
 
@@ -60,9 +62,9 @@ fn create_token(user_id: Uuid, jwt_secret: &str) -> Result<String, StatusCode> {
     encode(
         &Header::new(Algorithm::HS256),
         &claims,
-        &EncodingKey::from_secret(jwt_secret.asbytes()),
+        &EncodingKey::from_secret(jwt_secret.as_bytes()),
     )
-    .maperr(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 #[derive(Serialize)]
@@ -153,16 +155,28 @@ pub async fn login(
     Ok(Json(LoginResponse { token }))
 }
 
-fn create_token(user_id: Uuid, jwt_secret: &str) -> Result<String, StatusCode> {
-    let claims = Claims {
-        sub: user_id.to_string(),
-        exp: get_current_timestamp() + 3600,
+pub async fn profile(
+    State(state): State<AppState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let user = sqlx::query!(
+        r#"
+        SELECT id, email
+        FROM users
+        WHERE id = $1
+        "#,
+        auth_user.id
+    )
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let Some(user) = user else {
+        return Err(StatusCode::NOT_FOUND);
     };
 
-    encode(
-        &Header::new(Algorithm::HS256),
-        &claims,
-        &EncodingKey::from_secret(jwt_secret.as_bytes()),
-    )
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    Ok(Json(serde_json::json!({
+        "id": user.id,
+        "email": user.email
+    })))
 }
