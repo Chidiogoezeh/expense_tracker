@@ -72,9 +72,9 @@ pub struct RegistrationResponse {
 }
 
 pub async fn register(
-    State(pool): State<PgPool>,
+    State(state): State<AppState>,
     Json(input): Json<RegisterRequest>,
-) -> Result<(StatusCode, Json<RegisterResponse>), StatusCode> {
+) -> Result<(StatusCode, Json<RegistrationResponse>), StatusCode> {
     if input.email.trim().is_empty() || input.password.len() < 8 {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -82,7 +82,7 @@ pub async fn register(
     let email = input.email.trim().to_lowercase();
 
     let existing = sqlx::query!("SELECT id FROM users WHERE email = $1", email)
-        .fetch_optional(&pool)
+        .fetch_optional(&state.pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -102,13 +102,13 @@ pub async fn register(
         email,
         password_hash
     )
-    .fetch_one(&pool)
+    .fetch_one(&state.pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok((
         StatusCode::CREATED,
-        Json(RegisterResponse {
+        Json(RegistrationResponse {
             id: user.id,
             email: user.email,
         }),
