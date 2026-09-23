@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use argon2::{
     Argon2,
-    password_hash::{PasswordHasher, PasswordVerifier},
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier},
 };
 
 use crate::{AppState, middleware::AuthUser};
@@ -39,7 +39,7 @@ fn hash_password(password: &str) -> Result<String, StatusCode> {
     let password_hash = Argon2::default()
         .hash_password(password.as_bytes())
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .to_string;
+        .to_string();
 
     Ok(password_hash)
 }
@@ -52,7 +52,6 @@ fn verify_password(password: &str, stored_hash: &str) -> Result<bool, StatusCode
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok())
 }
-
 fn create_token(user_id: Uuid, jwt_secret: &str) -> Result<String, StatusCode> {
     let claims = Claims {
         sub: user_id.to_string(),
