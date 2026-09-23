@@ -78,3 +78,22 @@ impl DisplayExpense for Expense {
         );
     }
 }
+
+pub async fn get_expenses(
+    State(state): State<AppState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> Result<Json<Vec<ExpenseRow>>, StatusCode> {
+    let expenses = sqlx::query_as::<_, ExpenseRow>(
+        r#"
+        SELECT id, description, amount, category
+        FROM expenses
+        WHERE user_id = $1
+        "#,
+    )
+    .bind(auth_user.id)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(expenses))
+}
