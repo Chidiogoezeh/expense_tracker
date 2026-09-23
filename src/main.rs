@@ -109,7 +109,7 @@ async fn get_total(State(state): State<AppState>) -> Result<Json<serde_json::Val
 }
 
 async fn get_category_totals(
-    State(pool): State<PgPool>,
+    State(state): State<AppState>,
 ) -> Result<Json<Vec<CategoryTotal>>, StatusCode> {
     let totals = sqlx::query_as::<_, CategoryTotal>(
         r#"
@@ -118,7 +118,7 @@ async fn get_category_totals(
         GROUP BY category
         "#,
     )
-    .fetch_all(&pool)
+    .fetch_all(&state.pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
