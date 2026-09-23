@@ -8,6 +8,12 @@ use axum::{
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use uuid::Uuid;
 
+#[derive(Clone)]
+pub struct AppState {
+    pub pool: PgPool,
+    pub jwt_secret: String,
+}
+
 #[derive(serde::Deserialize)]
 struct CreateExpense {
     description: String,
