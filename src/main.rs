@@ -28,7 +28,7 @@ async fn main() {
         .max_connections(5)
         .connect(&database_url)
         .await
-        .unwrap();
+        .expect("Failed to connect to database");
 
     let state = AppState { pool, jwt_secret };
 

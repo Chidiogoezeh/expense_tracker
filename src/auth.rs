@@ -4,16 +4,16 @@ use axum::{
     http::StatusCode,
 };
 
+use argon2::{
+    Argon2,
+    password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
+};
+
 use jsonwebtoken::{Algorithm, EncodingKey, Header, encode, get_current_timestamp};
 
 use serde::{Deserialize, Serialize};
 
 use uuid::Uuid;
-
-use argon2::{
-    Argon2,
-    password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
-};
 
 use crate::{AppState, middleware::AuthUser};
 
@@ -36,12 +36,10 @@ pub struct Claims {
 }
 
 fn hash_password(password: &str) -> Result<String, StatusCode> {
-    let password_hash = Argon2::default()
+    Argon2::default()
         .hash_password(password.as_bytes())
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .to_string();
-
-    Ok(password_hash)
+        .map(|hash| hash.to_string())
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 fn verify_password(password: &str, stored_hash: &str) -> Result<bool, StatusCode> {
@@ -52,10 +50,13 @@ fn verify_password(password: &str, stored_hash: &str) -> Result<bool, StatusCode
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok())
 }
+
 fn create_token(user_id: Uuid, jwt_secret: &str) -> Result<String, StatusCode> {
+    const TOKEN_LIFETIME_SECONDS: u64 = 3000;
+
     let claims = Claims {
         sub: user_id.to_string(),
-        exp: get_current_timestamp() + 3000,
+        exp: get_current_timestamp() + TOKEN_LIFETIME_SECONDS,
     };
 
     encode(
@@ -76,12 +77,15 @@ pub async fn register(
     State(state): State<AppState>,
     Json(input): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<RegistrationResponse>), StatusCode> {
+    // Validate
     if input.email.trim().is_empty() || input.password.len() < 8 {
         return Err(StatusCode::BAD_REQUEST);
     }
 
+    // Normalize email
     let email = input.email.trim().to_lowercase();
 
+    // Check whether email already exists
     let existing = sqlx::query!("SELECT id FROM users WHERE email = $1", email)
         .fetch_optional(&state.pool)
         .await
@@ -91,8 +95,10 @@ pub async fn register(
         return Err(StatusCode::CONFLICT);
     }
 
+    // Hash password
     let password_hash = hash_password(&input.password)?;
 
+    // Create user
     let user = sqlx::query!(
         r#"
         INSERT INTO users (id, email, password_hash)
@@ -127,6 +133,7 @@ pub async fn login(
 ) -> Result<Json<LoginResponse>, StatusCode> {
     let email = input.email.trim().to_lowercase();
 
+    // Find user
     let user = sqlx::query!(
         r#"
         SELECT id, password_hash
@@ -143,12 +150,14 @@ pub async fn login(
         return Err(StatusCode::UNAUTHORIZED);
     };
 
+    // Verify password
     let valid = verify_password(&input.password, &user.password_hash)?;
 
     if !valid {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
+    // Create JWT
     let token = create_token(user.id, &state.jwt_secret)?;
 
     Ok(Json(LoginResponse { token }))
