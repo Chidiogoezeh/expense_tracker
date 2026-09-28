@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use uuid::Uuid;
 
-use crate::{AppState, middleware::AuthUser};
+use crate::{AppState, error::AppError, middleware::AuthUser};
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {
@@ -35,23 +35,22 @@ pub struct Claims {
     pub exp: u64,
 }
 
-fn hash_password(password: &str) -> Result<String, StatusCode> {
+fn hash_password(password: &str) -> Result<String, AppError> {
     Argon2::default()
         .hash_password(password.as_bytes())
         .map(|hash| hash.to_string())
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(|_| AppError::Internal)
 }
 
-fn verify_password(password: &str, stored_hash: &str) -> Result<bool, StatusCode> {
-    let parsed_hash =
-        PasswordHash::new(stored_hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+fn verify_password(password: &str, stored_hash: &str) -> Result<bool, AppError> {
+    let parsed_hash = PasswordHash::new(stored_hash).map_err(|_| AppError::Internal)?;
 
     Ok(Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok())
 }
 
-fn create_token(user_id: Uuid, jwt_secret: &str) -> Result<String, StatusCode> {
+fn create_token(user_id: Uuid, jwt_secret: &str) -> Result<String, AppError> {
     const TOKEN_LIFETIME_SECONDS: u64 = 3000;
 
     let claims = Claims {
@@ -64,7 +63,7 @@ fn create_token(user_id: Uuid, jwt_secret: &str) -> Result<String, StatusCode> {
         &claims,
         &EncodingKey::from_secret(jwt_secret.as_bytes()),
     )
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    .map_err(|_| AppError::Internal)
 }
 
 #[derive(Serialize)]
@@ -76,10 +75,10 @@ pub struct RegistrationResponse {
 pub async fn register(
     State(state): State<AppState>,
     Json(input): Json<RegisterRequest>,
-) -> Result<(StatusCode, Json<RegistrationResponse>), StatusCode> {
+) -> Result<(StatusCode, Json<RegistrationResponse>), AppError> {
     // Validate
     if input.email.trim().is_empty() || input.password.len() < 8 {
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(AppError::BadRequest);
     }
 
     // Normalize email
@@ -89,10 +88,10 @@ pub async fn register(
     let existing = sqlx::query!("SELECT id FROM users WHERE email = $1", email)
         .fetch_optional(&state.pool)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|_| AppError::Database)?;
 
     if existing.is_some() {
-        return Err(StatusCode::CONFLICT);
+        return Err(AppError::Conflict);
     }
 
     // Hash password
@@ -111,7 +110,7 @@ pub async fn register(
     )
     .fetch_one(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|_| AppError::Database)?;
 
     Ok((
         StatusCode::CREATED,
@@ -130,7 +129,7 @@ pub struct LoginResponse {
 pub async fn login(
     State(state): State<AppState>,
     Json(input): Json<LoginRequest>,
-) -> Result<Json<LoginResponse>, StatusCode> {
+) -> Result<Json<LoginResponse>, AppError> {
     let email = input.email.trim().to_lowercase();
 
     // Find user
@@ -144,17 +143,17 @@ pub async fn login(
     )
     .fetch_optional(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|_| AppError::Database)?;
 
     let Some(user) = user else {
-        return Err(StatusCode::UNAUTHORIZED);
+        return Err(AppError::Unauthorized);
     };
 
     // Verify password
     let valid = verify_password(&input.password, &user.password_hash)?;
 
     if !valid {
-        return Err(StatusCode::UNAUTHORIZED);
+        return Err(AppError::Unauthorized);
     }
 
     // Create JWT
@@ -166,7 +165,7 @@ pub async fn login(
 pub async fn profile(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
-) -> Result<Json<serde_json::Value>, StatusCode> {
+) -> Result<Json<serde_json::Value>, AppError> {
     let user = sqlx::query!(
         r#"
         SELECT id, email
@@ -177,10 +176,10 @@ pub async fn profile(
     )
     .fetch_optional(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|_| AppError::Database)?;
 
     let Some(user) = user else {
-        return Err(StatusCode::NOT_FOUND);
+        return Err(AppError::NotFound);
     };
 
     Ok(Json(serde_json::json!({
