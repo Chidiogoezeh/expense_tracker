@@ -15,17 +15,25 @@ use serde::{Deserialize, Serialize};
 
 use uuid::Uuid;
 
+use validator::Validate;
+
 use crate::{AppState, error::AppError, middleware::AuthUser};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct RegisterRequest {
+    #[validate(email)]
     pub email: String,
+
+    #[validate(length(min = 8))]
     pub password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct LoginRequest {
+    #[validate(email)]
     pub email: String,
+
+    #[validate(length(min = 8))]
     pub password: String,
 }
 
@@ -77,9 +85,7 @@ pub async fn register(
     Json(input): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<RegistrationResponse>), AppError> {
     // Validate
-    if input.email.trim().is_empty() || input.password.len() < 8 {
-        return Err(AppError::BadRequest);
-    }
+    input.validate().map_err(|_| AppError::BadRequest)?;
 
     // Normalize email
     let email = input.email.trim().to_lowercase();
@@ -130,6 +136,8 @@ pub async fn login(
     State(state): State<AppState>,
     Json(input): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, AppError> {
+    // Validate
+    input.validate().map_err(|_| AppError::BadRequest)?;
     let email = input.email.trim().to_lowercase();
 
     // Find user
