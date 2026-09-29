@@ -147,8 +147,13 @@ pub async fn login(
     State(state): State<AppState>,
     Json(input): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, AppError> {
+    info!("Login request received");
     // Validate
-    input.validate().map_err(|_| AppError::BadRequest)?;
+    input.validate().map_err(|_| {
+        warn!("Login validation failed");
+        AppError::BadRequest
+    })?;
+
     let email = input.email.trim().to_lowercase();
 
     // Find user
@@ -165,6 +170,7 @@ pub async fn login(
     .map_err(|_| AppError::Database)?;
 
     let Some(user) = user else {
+        warn!("Login failed");
         return Err(AppError::Unauthorized);
     };
 
@@ -172,11 +178,17 @@ pub async fn login(
     let valid = verify_password(&input.password, &user.password_hash)?;
 
     if !valid {
+        warn!("Login failed");
         return Err(AppError::Unauthorized);
     }
 
     // Create JWT
     let token = create_token(user.id, &state.jwt_secret)?;
+
+    info!(
+        user_id = %user.id,
+        "User logged in successfully"
+    );
 
     Ok(Json(LoginResponse { token }))
 }
