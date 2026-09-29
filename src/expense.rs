@@ -8,6 +8,8 @@ use uuid::Uuid;
 
 use validator::{Validate, ValidationError};
 
+use tracing::{info, warn};
+
 use crate::{AppState, error::AppError, middleware::AuthUser};
 
 fn validate_amount(amount: f64) -> Result<(), ValidationError> {
@@ -43,16 +45,23 @@ pub async fn create_expense(
     Extension(auth_user): Extension<AuthUser>,
     Json(input): Json<CreateExpense>,
 ) -> Result<(StatusCode, Json<ExpenseRow>), AppError> {
-    input.validate().map_err(|_| AppError::BadRequest)?;
+    input.validate().map_err(|_| {
+        warn!(
+            user_id = %auth_user.id,
+            "Expense validation failed"
+        );
+
+        AppError::BadRequest
+    })?;
 
     let expense = sqlx::query_as::<_, ExpenseRow>(
         r#"
-        INSERT INTO expenses
-            (id, user_id, description, amount, category)
-        VALUES
-            ($1, $2, $3, $4, $5)
-        RETURNING id, description, amount, category
-        "#,
+    INSERT INTO expenses
+        (id, user_id, description, amount, category)
+    VALUES
+        ($1, $2, $3, $4, $5)
+    RETURNING id, description, amount, category
+    "#,
     )
     .bind(Uuid::new_v4())
     .bind(auth_user.id)
@@ -62,6 +71,12 @@ pub async fn create_expense(
     .fetch_one(&state.pool)
     .await
     .map_err(|_| AppError::Database)?;
+
+    info!(
+        user_id = %auth_user.id,
+        expense_id = %expense.id,
+        "Expense created"
+    );
 
     Ok((StatusCode::CREATED, Json(expense)))
 }
@@ -106,6 +121,12 @@ pub async fn delete_expense(
     if result.rows_affected() == 0 {
         return Err(StatusCode::NOT_FOUND);
     }
+
+    info!(
+        user_id = %auth_user.id,
+        expense_id = %id,
+        "Expense deleted"
+    );
 
     Ok(StatusCode::NO_CONTENT)
 }
