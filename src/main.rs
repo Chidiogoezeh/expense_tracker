@@ -10,6 +10,10 @@ use axum::{
 
 use sqlx::{PgPool, postgres::PgPoolOptions};
 
+use tracing::info;
+
+use tracing_subscriber::EnvFilter;
+
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
@@ -19,6 +23,12 @@ pub struct AppState {
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
+
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .init();
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
@@ -57,7 +67,7 @@ async fn main() {
         .await
         .unwrap();
 
-    println!("Server running on http://127.0.0.1:3000");
+    info!("Server running on http://127.0.0.1:3000");
 
     axum::serve(listener, app).await.unwrap();
 }
