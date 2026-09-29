@@ -6,12 +6,27 @@ use axum::{
 
 use uuid::Uuid;
 
-use crate::{AppState, middleware::AuthUser};
+use validator::{Validate, ValidationError};
 
-#[derive(serde::Deserialize)]
+use crate::{AppState, error::AppError, middleware::AuthUser};
+
+fn validate_amount(amount: f64) -> Result<(), ValidationError> {
+    if amount <= 0.0 || !amount.is_finite() {
+        return Err(ValidationError::new("invalid_amount"));
+    }
+
+    Ok(())
+}
+
+#[derive(serde::Deserialize, Validate)]
 pub struct CreateExpense {
+    #[validate(length(min = 1, max = 200))]
     pub description: String,
+
+    #[validate(custom(function = "validate_amount"))]
     pub amount: f64,
+
+    #[validate(length(min = 1, max = 50))]
     pub category: String,
 }
 
@@ -27,10 +42,8 @@ pub async fn create_expense(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(input): Json<CreateExpense>,
-) -> Result<(StatusCode, Json<ExpenseRow>), StatusCode> {
-    if input.amount <= 0.0 {
-        return Err(StatusCode::BAD_REQUEST);
-    }
+) -> Result<(StatusCode, Json<ExpenseRow>), AppError> {
+    input.validate().map_err(|_| AppError::BadRequest)?;
 
     let expense = sqlx::query_as::<_, ExpenseRow>(
         r#"
@@ -48,7 +61,7 @@ pub async fn create_expense(
     .bind(input.category)
     .fetch_one(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|_| AppError::Database)?;
 
     Ok((StatusCode::CREATED, Json(expense)))
 }
