@@ -17,6 +17,8 @@ use uuid::Uuid;
 
 use validator::Validate;
 
+use tracing::{info, warn};
+
 use crate::{AppState, error::AppError, middleware::AuthUser};
 
 #[derive(Deserialize, Validate)]
@@ -84,8 +86,12 @@ pub async fn register(
     State(state): State<AppState>,
     Json(input): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<RegistrationResponse>), AppError> {
+    info!("Registration request received");
     // Validate
-    input.validate().map_err(|_| AppError::BadRequest)?;
+    input.validate().map_err(|_| {
+        warn!("Registration validation failed");
+        AppError::BadRequest
+    })?;
 
     // Normalize email
     let email = input.email.trim().to_lowercase();
@@ -117,6 +123,11 @@ pub async fn register(
     .fetch_one(&state.pool)
     .await
     .map_err(|_| AppError::Database)?;
+
+    info!(
+        user_id = %user.id,
+        "User registered successfully"
+    );
 
     Ok((
         StatusCode::CREATED,
