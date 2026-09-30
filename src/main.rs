@@ -10,6 +10,8 @@ use axum::{
 
 use sqlx::{PgPool, postgres::PgPoolOptions};
 
+use tower_http::trace::TraceLayer;
+
 use tracing::info;
 
 use tracing_subscriber::EnvFilter;
@@ -60,6 +62,7 @@ async fn main() {
         .route("/register", post(auth::register))
         .route("/login", post(auth::login))
         .merge(protected_routes)
+        .layer(TraceLayer::new_for_http())
         .with_state(state);
 
     // Start server
