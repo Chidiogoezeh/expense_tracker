@@ -1,6 +1,5 @@
 use axum::{
     extract::{Request, State},
-    http::StatusCode,
     middleware::Next,
     response::Response,
 };
@@ -9,7 +8,7 @@ use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 
 use uuid::Uuid;
 
-use crate::{AppState, auth::Claims};
+use crate::{AppState, auth::Claims, error::AppError};
 
 #[derive(Clone)]
 pub struct AuthUser {
@@ -20,18 +19,18 @@ pub async fn auth_middleware(
     State(state): State<AppState>,
     mut request: Request,
     next: Next,
-) -> Result<Response, StatusCode> {
+) -> Result<Response, AppError> {
     // Get Authorization header
     let auth_header = request
         .headers()
         .get("Authorization")
         .and_then(|value| value.to_str().ok())
-        .ok_or(StatusCode::UNAUTHORIZED)?;
+        .ok_or(AppError::Unauthorized)?;
 
     // Extract Bearer token
     let token = auth_header
         .strip_prefix("Bearer ")
-        .ok_or(StatusCode::UNAUTHORIZED)?;
+        .ok_or(AppError::Unauthorized)?;
 
     // Verify JWT
     let token_data = decode::<Claims>(
@@ -39,10 +38,10 @@ pub async fn auth_middleware(
         &DecodingKey::from_secret(state.jwt_secret.as_bytes()),
         &Validation::new(Algorithm::HS256),
     )
-    .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    .map_err(|_| AppError::Unauthorized)?;
 
     // Extract user ID
-    let user_id = Uuid::parse_str(&token_data.claims.sub).map_err(|_| StatusCode::UNAUTHORIZED)?;
+    let user_id = Uuid::parse_str(&token_data.claims.sub).map_err(|_| AppError::Unauthorized)?;
 
     // Make authenticated user available to handlers
     request.extensions_mut().insert(AuthUser { id: user_id });
