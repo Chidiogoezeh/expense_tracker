@@ -97,6 +97,11 @@ pub async fn get_expenses(
     .await
     .map_err(|_| AppError::Database)?;
 
+    info!(
+        user_id = %auth_user.id,
+        "Expenses retrieved"
+    );
+
     Ok(Json(expenses))
 }
 
@@ -152,6 +157,11 @@ pub async fn get_total(
     .await
     .map_err(|_| AppError::Database)?;
 
+    info!(
+        user_id = %auth_user.id,
+        "Expense total retrieved"
+    );
+
     Ok(Json(serde_json::json!({
         "total": result.total
     })))
@@ -179,6 +189,11 @@ pub async fn get_category_totals(
     .fetch_all(&state.pool)
     .await
     .map_err(|_| AppError::Database)?;
+
+    info!(
+        user_id = %auth_user.id,
+        "Category totals retrieved"
+    );
 
     Ok(Json(totals))
 }
