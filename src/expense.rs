@@ -84,7 +84,7 @@ pub async fn create_expense(
 pub async fn get_expenses(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
-) -> Result<Json<Vec<ExpenseRow>>, StatusCode> {
+) -> Result<Json<Vec<ExpenseRow>>, AppError> {
     let expenses = sqlx::query_as::<_, ExpenseRow>(
         r#"
         SELECT id, description, amount, category
@@ -95,7 +95,7 @@ pub async fn get_expenses(
     .bind(auth_user.id)
     .fetch_all(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|_| AppError::Database)?;
 
     Ok(Json(expenses))
 }
@@ -104,7 +104,7 @@ pub async fn delete_expense(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
-) -> Result<StatusCode, StatusCode> {
+) -> Result<StatusCode, AppError> {
     let result = sqlx::query(
         r#"
         DELETE FROM expenses
@@ -116,10 +116,10 @@ pub async fn delete_expense(
     .bind(auth_user.id)
     .execute(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|_| AppError::Database)?;
 
     if result.rows_affected() == 0 {
-        return Err(StatusCode::NOT_FOUND);
+        return Err(AppError::NotFound);
     }
 
     info!(
@@ -139,7 +139,7 @@ pub struct TotalResult {
 pub async fn get_total(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
-) -> Result<Json<serde_json::Value>, StatusCode> {
+) -> Result<Json<serde_json::Value>, AppError> {
     let result = sqlx::query_as::<_, TotalResult>(
         r#"
         SELECT COALESCE(SUM(amount), 0.0) AS total
@@ -150,7 +150,7 @@ pub async fn get_total(
     .bind(auth_user.id)
     .fetch_one(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|_| AppError::Database)?;
 
     Ok(Json(serde_json::json!({
         "total": result.total
@@ -166,7 +166,7 @@ pub struct CategoryTotal {
 pub async fn get_category_totals(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
-) -> Result<Json<Vec<CategoryTotal>>, StatusCode> {
+) -> Result<Json<Vec<CategoryTotal>>, AppError> {
     let totals = sqlx::query_as::<_, CategoryTotal>(
         r#"
         SELECT category, SUM(amount) AS total
@@ -178,7 +178,7 @@ pub async fn get_category_totals(
     .bind(auth_user.id)
     .fetch_all(&state.pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|_| AppError::Database)?;
 
     Ok(Json(totals))
 }
