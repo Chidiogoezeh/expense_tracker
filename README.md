@@ -2,11 +2,11 @@
 
 A RESTful **Expense Tracker API built with Rust**, evolved from a command-line application into a backend API as part of my **12-Week Rust Backend Learning Roadmap**.
 
-The project started as a simple CLI application during Weeks 1–3 and was progressively expanded as I learned more Rust and backend development concepts through Week 8.
+The project started as a simple CLI application during Weeks 1–3 and was progressively expanded as I learned more Rust and backend development concepts through **Week 9**.
 
 ## Project Evolution
 
-This project reflects my progression through the first eight weeks of the roadmap:
+This project reflects my progression through the first nine weeks of the roadmap:
 
 - **Week 1:** Rust fundamentals — variables, mutability, data types, functions, ownership, borrowing, references, and shadowing.
 
@@ -24,7 +24,9 @@ This project reflects my progression through the first eight weeks of the roadma
 
 - **Week 8:** Authentication — password hashing with Argon2, JWT authentication, user registration, login, authentication middleware, protected routes, and user-owned expenses.
 
-The project's Git commit history shows this progression from the original **Expense Tracker CLI** to the current **authenticated PostgreSQL-backed Expense Tracker API**.
+- **Week 9:** Input validation, structured logging, application error handling, HTTP middleware, protected request processing, and consistent error responses.
+
+The project's Git commit history shows this progression from the original **Expense Tracker CLI** to the current **authenticated PostgreSQL-backed Expense Tracker API** with validation, structured logging, centralized error handling, and HTTP middleware.
 
 ## Current Features
 
@@ -52,6 +54,7 @@ The project's Git commit history shows this progression from the original **Expe
 - View expense totals by category
 - Expenses associated with authenticated users
 - Users can only access their own expenses
+- Expense input validation
 
 ### Backend
 
@@ -65,7 +68,11 @@ The project's Git commit history shows this progression from the original **Expe
 - HTTP handlers
 - HTTP status codes
 - Input validation
-- Error handling
+- Application error handling
+- Consistent HTTP error responses
+- Structured logging with `tracing`
+- HTTP request/response tracing
+- Authentication middleware
 - Asynchronous request handling
 
 ## Rust & Backend Concepts Practiced
@@ -97,6 +104,9 @@ The project's Git commit history shows this progression from the original **Expe
 - `Option`
 - `Result`
 - Custom error types
+- Error propagation with `?`
+- Error mapping with `map_err`
+- HTTP error responses
 
 ### Project & Module Organization
 
@@ -125,6 +135,7 @@ The project's Git commit history shows this progression from the original **Expe
 - HTTP status codes
 - Request handling
 - Response handling
+- HTTP middleware
 
 ### Database Development
 
@@ -157,6 +168,55 @@ The project's Git commit history shows this progression from the original **Expe
 - Protected routes
 - User authentication
 - User-owned resources
+
+### Validation
+
+- Request validation
+- `validator` crate
+- Validation derives
+- Email validation
+- Password length validation
+- Expense description validation
+- Expense amount validation
+- Expense category validation
+- Custom validation functions
+- Validation before database operations
+
+### Structured Logging
+
+- `tracing`
+- `tracing-subscriber`
+- Log levels
+- Structured log fields
+- Request logging
+- Authentication logging
+- Application event logging
+- HTTP request/response tracing with `TraceLayer`
+
+### Application Error Handling
+
+- Centralized `AppError`
+- Application-level error types
+- Mapping application errors to HTTP status codes
+- `400 Bad Request`
+- `401 Unauthorized`
+- `404 Not Found`
+- `409 Conflict`
+- `500 Internal Server Error`
+- Consistent error responses
+- Database error mapping
+- Avoiding unnecessary internal error details in API responses
+
+### HTTP Middleware
+
+- Axum middleware
+- Authentication middleware
+- JWT extraction
+- JWT verification
+- Request extensions
+- Protected route processing
+- Middleware request flow
+- HTTP request/response tracing
 
 ## API
 
@@ -213,13 +273,15 @@ Protected request
       ↓
 Authorization: Bearer <JWT>
       ↓
-JWT middleware
+HTTP middleware
       ↓
 Verify JWT
       ↓
 Extract user ID
       ↓
 Execute protected handler
+      ↓
+Return response
 ```
 
 ### Register
@@ -249,6 +311,18 @@ Example response:
 
 The password is hashed with Argon2 before being stored in PostgreSQL. The plaintext password is never stored.
 
+Invalid registration input returns:
+
+```text
+400 Bad Request
+```
+
+Attempting to register an existing email returns:
+
+```text
+409 Conflict
+```
+
 ### Login
 
 ```http
@@ -275,12 +349,24 @@ Example response:
 
 The JWT is returned after the supplied password is successfully verified against the stored password hash.
 
+Invalid credentials return:
+
+```text
+401 Unauthorized
+```
+
 ### Authentication Header
 
 Protected requests must include the JWT:
 
 ```http
 Authorization: Bearer <JWT>
+```
+
+Requests without a valid JWT return:
+
+```text
+401 Unauthorized
 ```
 
 ### Profile
@@ -327,6 +413,8 @@ Example response:
   "category": "Food"
 }
 ```
+
+The request is validated before the expense is written to the database.
 
 The authenticated user's ID is obtained from the JWT by the authentication middleware and stored with the expense.
 
@@ -393,6 +481,12 @@ Successful deletion returns:
 204 No Content
 ```
 
+Attempting to delete an expense that does not belong to the authenticated user returns:
+
+```text
+404 Not Found
+```
+
 ## Database
 
 The application uses **PostgreSQL** for persistent data storage and **SQLx** for database communication.
@@ -401,6 +495,8 @@ A SQLx connection pool is created when the application starts and shared with th
 
 ```text
 Axum API
+    ↓
+HTTP Middleware
     ↓
 Authentication Middleware
     ↓
@@ -498,6 +594,7 @@ main.rs
     Database connection
     Route configuration
     Server startup
+    HTTP tracing
 
 auth.rs
     Registration
@@ -506,14 +603,17 @@ auth.rs
     Password hashing
     Password verification
     JWT creation
+    Request validation
 
 middleware.rs
     JWT extraction
     JWT verification
     Authenticated user identification
+    Request extensions
 
 expense.rs
     Expense creation
+    Expense validation
     Expense retrieval
     Expense deletion
     Expense totals
@@ -521,6 +621,8 @@ expense.rs
 
 error.rs
     Application error types
+    HTTP error responses
+    Error-to-status-code mapping
 ```
 
 The project structure will continue to evolve as the application moves toward a more production-style backend architecture.
@@ -545,7 +647,7 @@ Create a `.env` file:
 
 ```env
 DATABASE_URL=postgres://postgres:YOUR_PASSWORD@localhost/expense_tracker
-JWT_SECRET=your-long-random-secret-desires-LOL
+JWT_SECRET=your-long-random-secret
 ```
 
 Run the database migrations:
@@ -570,6 +672,16 @@ http://127.0.0.1:3000
 
 The API endpoints can be tested using Postman.
 
+The application also uses Rust's standard testing workflow for checking the project:
+
+```bash
+cargo fmt --check
+cargo check
+cargo build
+cargo clippy
+cargo test
+```
+
 ### 1. Register
 
 ```http
@@ -582,6 +694,12 @@ Content-Type: application/json
   "email": "chidi@example.com",
   "password": "password123"
 }
+```
+
+Invalid input should return:
+
+```text
+400 Bad Request
 ```
 
 ### 2. Login
@@ -599,6 +717,12 @@ Content-Type: application/json
 ```
 
 Copy the returned JWT.
+
+Invalid credentials should return:
+
+```text
+401 Unauthorized
+```
 
 ### 3. Access Profile
 
@@ -623,6 +747,12 @@ Content-Type: application/json
 }
 ```
 
+Invalid expense data should return:
+
+```text
+400 Bad Request
+```
+
 ### 5. Retrieve Expenses
 
 ```http
@@ -636,39 +766,42 @@ Requests to protected endpoints without a valid JWT should return:
 401 Unauthorized
 ```
 
+The application also produces structured logs for important application events and HTTP requests.
+
 ## Learning Goal
 
-The goal of this project is to apply the concepts learned throughout the first eight weeks of my Rust backend journey by continuously improving the same application.
+The goal of this project is to apply the concepts learned throughout the first nine weeks of my Rust backend journey by continuously improving the same application.
 
-Rather than building a separate project for every concept, I am using the Expense Tracker to demonstrate how a small Rust application can evolve from a **CLI program into an authenticated RESTful backend API with PostgreSQL persistence**.
+Rather than building a separate project for every concept, I am using the Expense Tracker to demonstrate how a small Rust application can evolve from a **CLI program into an authenticated RESTful backend API with PostgreSQL persistence, validation, structured logging, centralized error handling, and HTTP middleware**.
 
-The Week 8 implementation specifically demonstrates how authentication fits into a backend application:
+The Week 9 implementation specifically demonstrates how validation, error handling, logging, and middleware fit into a backend application:
 
 ```text
-Registration
+Request
     ↓
-Password Hashing
-    ↓
-PostgreSQL
-    ↓
-Login
-    ↓
-JWT
+HTTP Middleware
     ↓
 Authentication Middleware
     ↓
-Protected Routes
+Input Validation
     ↓
-User-Owned Expenses
+Handler
+    ↓
+Business Operation
+    ↓
+Database
+    ↓
+Application Error Handling
+    ↓
+Structured Logging
+    ↓
+HTTP Response
 ```
 
 ## Future Improvements
 
 As I progress through the remaining weeks of the roadmap, I plan to add:
 
-- Request validation
-- Structured logging
-- Better application error handling
 - Production-style project architecture
 - Automated tests
 - Docker and Docker Compose
