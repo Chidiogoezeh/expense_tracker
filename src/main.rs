@@ -1,7 +1,10 @@
 mod auth;
+mod config;
 mod error;
 mod expense;
 mod middleware;
+
+use config::Config;
 
 use axum::{
     Router, middleware as axum_middleware,
@@ -23,8 +26,8 @@ pub struct AppState {
 }
 
 #[tokio::main]
-async fn main() {
-    dotenvy::dotenv().ok();
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config = Config::from_env()?;
 
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -32,17 +35,15 @@ async fn main() {
         )
         .init();
 
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-
-    let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-
     let pool = PgPoolOptions::new()
         .max_connections(5)
-        .connect(&database_url)
-        .await
-        .expect("Failed to connect to database");
+        .connect(&config.database_url)
+        .await?;
 
-    let state = AppState { pool, jwt_secret };
+    let state = AppState {
+        pool,
+        jwt_secret: config.jwt_secret.clone(),
+    };
 
     // Protected routes
     let protected_routes = Router::new()
@@ -66,11 +67,11 @@ async fn main() {
         .with_state(state);
 
     // Start server
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", config.port)).await?;
 
-    info!("Server running on http://127.0.0.1:3000");
+    info!("Server running on http://127.0.0.1:{}", config.port);
 
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }
