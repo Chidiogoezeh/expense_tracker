@@ -1,7 +1,7 @@
-mod auth;
+mod auth_handler;
 mod config;
 mod error;
-mod expense;
+mod expense_handler;
 mod middleware;
 mod state;
 
@@ -44,12 +44,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Protected routes
     let protected_routes = Router::new()
-        .route("/profile", get(auth::profile))
-        .route("/expenses", get(expense::get_expenses))
-        .route("/expenses", post(expense::create_expense))
-        .route("/expenses/{id}", delete(expense::delete_expense))
-        .route("/expenses/total", get(expense::get_total))
-        .route("/expenses/categories", get(expense::get_category_totals))
+        .route("/profile", get(auth_handler::profile))
+        .route("/expenses", get(expense_handler::get_expenses))
+        .route("/expenses", post(expense_handler::create_expense))
+        .route("/expenses/{id}", delete(expense_handler::delete_expense))
+        .route("/expenses/total", get(expense_handler::get_total))
+        .route(
+            "/expenses/categories",
+            get(expense_handler::get_category_totals),
+        )
         .layer(axum_middleware::from_fn_with_state(
             state.clone(),
             middleware::auth_middleware,
@@ -57,8 +60,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Public routes
     let app = Router::new()
-        .route("/register", post(auth::register))
-        .route("/login", post(auth::login))
+        .route("/register", post(auth_handler::register))
+        .route("/login", post(auth_handler::login))
         .merge(protected_routes)
         .layer(TraceLayer::new_for_http())
         .with_state(state);
