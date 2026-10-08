@@ -3,8 +3,11 @@ mod config;
 mod error;
 mod expense;
 mod middleware;
+mod state;
 
 use config::Config;
+
+use state::AppState;
 
 use axum::{
     Router, middleware as axum_middleware,
@@ -18,12 +21,6 @@ use tower_http::trace::TraceLayer;
 use tracing::info;
 
 use tracing_subscriber::EnvFilter;
-
-#[derive(Clone)]
-pub struct AppState {
-    pub pool: PgPool,
-    pub jwt_secret: String,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
