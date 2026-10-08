@@ -1,6 +1,6 @@
 use argon2::{
     Argon2,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier},
+    password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
 };
 
 use jsonwebtoken::{Algorithm, EncodingKey, Header, encode, get_current_timestamp};
