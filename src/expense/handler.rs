@@ -4,13 +4,15 @@ use axum::{
     http::StatusCode,
 };
 
+use serde::Serialize;
+
 use uuid::Uuid;
 
 use validator::{Validate, ValidationError};
 
 use tracing::{info, warn};
 
-use crate::{AppState, error::AppError, middleware::AuthUser};
+use crate::{error::AppError, middleware::AuthUser, state::AppState};
 
 fn validate_amount(amount: f64) -> Result<(), ValidationError> {
     if amount <= 0.0 || !amount.is_finite() {
@@ -32,8 +34,8 @@ pub struct CreateExpense {
     pub category: String,
 }
 
-#[derive(Debug, serde::Serialize, sqlx::FromRow)]
-pub struct ExpenseRow {
+#[derive(Serialize)]
+pub struct ExpenseResponse {
     pub id: Uuid,
     pub description: String,
     pub amount: f64,
@@ -44,7 +46,7 @@ pub async fn create_expense(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(input): Json<CreateExpense>,
-) -> Result<(StatusCode, Json<ExpenseRow>), AppError> {
+) -> Result<(StatusCode, Json<ExpenseResponse>), AppError> {
     input.validate().map_err(|_| {
         warn!(
             user_id = %auth_user.id,
@@ -54,23 +56,15 @@ pub async fn create_expense(
         AppError::BadRequest
     })?;
 
-    let expense = sqlx::query_as::<_, ExpenseRow>(
-        r#"
-    INSERT INTO expenses
-        (id, user_id, description, amount, category)
-    VALUES
-        ($1, $2, $3, $4, $5)
-    RETURNING id, description, amount, category
-    "#,
-    )
-    .bind(Uuid::new_v4())
-    .bind(auth_user.id)
-    .bind(input.description)
-    .bind(input.amount)
-    .bind(input.category)
-    .fetch_one(&state.pool)
-    .await
-    .map_err(|_| AppError::Database)?;
+    let expense = state
+        .expense_service
+        .create(
+            auth_user.id,
+            input.description,
+            input.amount,
+            input.category,
+        )
+        .await?;
 
     info!(
         user_id = %auth_user.id,
@@ -78,31 +72,39 @@ pub async fn create_expense(
         "Expense created"
     );
 
-    Ok((StatusCode::CREATED, Json(expense)))
+    Ok((
+        StatusCode::CREATED,
+        Json(ExpenseResponse {
+            id: expense.id,
+            description: expense.description,
+            amount: expense.amount,
+            category: expense.category,
+        }),
+    ))
 }
 
 pub async fn get_expenses(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
-) -> Result<Json<Vec<ExpenseRow>>, AppError> {
-    let expenses = sqlx::query_as::<_, ExpenseRow>(
-        r#"
-        SELECT id, description, amount, category
-        FROM expenses
-        WHERE user_id = $1
-        "#,
-    )
-    .bind(auth_user.id)
-    .fetch_all(&state.pool)
-    .await
-    .map_err(|_| AppError::Database)?;
+) -> Result<Json<Vec<ExpenseResponse>>, AppError> {
+    let expenses = state.expense_service.get_all(auth_user.id).await?;
+
+    let response = expenses
+        .into_iter()
+        .map(|expense| ExpenseResponse {
+            id: expense.id,
+            description: expense.description,
+            amount: expense.amount,
+            category: expense.category,
+        })
+        .collect();
 
     info!(
         user_id = %auth_user.id,
         "Expenses retrieved"
     );
 
-    Ok(Json(expenses))
+    Ok(Json(response))
 }
 
 pub async fn delete_expense(
@@ -110,22 +112,7 @@ pub async fn delete_expense(
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
-    let result = sqlx::query(
-        r#"
-        DELETE FROM expenses
-        WHERE id = $1
-        AND user_id = $2
-        "#,
-    )
-    .bind(id)
-    .bind(auth_user.id)
-    .execute(&state.pool)
-    .await
-    .map_err(|_| AppError::Database)?;
-
-    if result.rows_affected() == 0 {
-        return Err(AppError::NotFound);
-    }
+    state.expense_service.delete(id, auth_user.id).await?;
 
     info!(
         user_id = %auth_user.id,
@@ -136,39 +123,27 @@ pub async fn delete_expense(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[derive(sqlx::FromRow)]
-pub struct TotalResult {
+#[derive(Serialize)]
+pub struct TotalResponse {
     pub total: f64,
 }
 
 pub async fn get_total(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
-) -> Result<Json<serde_json::Value>, AppError> {
-    let result = sqlx::query_as::<_, TotalResult>(
-        r#"
-        SELECT COALESCE(SUM(amount), 0.0) AS total
-        FROM expenses
-        WHERE user_id = $1
-        "#,
-    )
-    .bind(auth_user.id)
-    .fetch_one(&state.pool)
-    .await
-    .map_err(|_| AppError::Database)?;
+) -> Result<Json<TotalResponse>, AppError> {
+    let total = state.expense_service.get_total(auth_user.id).await?;
 
     info!(
         user_id = %auth_user.id,
         "Expense total retrieved"
     );
 
-    Ok(Json(serde_json::json!({
-        "total": result.total
-    })))
+    Ok(Json(TotalResponse { total }))
 }
 
-#[derive(serde::Serialize, sqlx::FromRow)]
-pub struct CategoryTotal {
+#[derive(Serialize)]
+pub struct CategoryTotalResponse {
     pub category: String,
     pub total: f64,
 }
@@ -176,24 +151,24 @@ pub struct CategoryTotal {
 pub async fn get_category_totals(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
-) -> Result<Json<Vec<CategoryTotal>>, AppError> {
-    let totals = sqlx::query_as::<_, CategoryTotal>(
-        r#"
-        SELECT category, SUM(amount) AS total
-        FROM expenses
-        WHERE user_id = $1
-        GROUP BY category
-        "#,
-    )
-    .bind(auth_user.id)
-    .fetch_all(&state.pool)
-    .await
-    .map_err(|_| AppError::Database)?;
+) -> Result<Json<Vec<CategoryTotalResponse>>, AppError> {
+    let totals = state
+        .expense_service
+        .get_category_totals(auth_user.id)
+        .await?;
+
+    let response = totals
+        .into_iter()
+        .map(|item| CategoryTotalResponse {
+            category: item.category,
+            total: item.total,
+        })
+        .collect();
 
     info!(
         user_id = %auth_user.id,
         "Category totals retrieved"
     );
 
-    Ok(Json(totals))
+    Ok(Json(response))
 }
