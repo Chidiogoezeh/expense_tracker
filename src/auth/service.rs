@@ -7,7 +7,10 @@ use jsonwebtoken::{Algorithm, EncodingKey, Header, encode, get_current_timestamp
 
 use uuid::Uuid;
 
-use crate::{auth::repository::UserRepository, error::AppError};
+use crate::{
+    auth::{Claims, repository::UserRepository},
+    error::AppError,
+};
 
 pub struct AuthService {
     repository: UserRepository,
@@ -121,7 +124,7 @@ fn verify_password(password: &str, stored_hash: &str) -> Result<bool, AppError> 
 fn create_token(user_id: Uuid, jwt_secret: &str) -> Result<String, AppError> {
     const TOKEN_LIFETIME_SECONDS: u64 = 3000;
 
-    let claims = crate::auth::Claims {
+    let claims = Claims {
         sub: user_id.to_string(),
         exp: get_current_timestamp() + TOKEN_LIFETIME_SECONDS,
     };
