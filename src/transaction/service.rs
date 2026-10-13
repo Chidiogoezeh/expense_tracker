@@ -9,7 +9,9 @@ use crate::{
             CreateTransactionRequest, TransactionRecord, TransactionResponse,
             UpdateTransactionRequest,
         },
-        repository::{TransactionFilters, TransactionRepository},
+        repository::{
+            NewTransaction, TransactionChanges, TransactionFilters, TransactionRepository,
+        },
     },
 };
 
@@ -50,15 +52,15 @@ impl TransactionService {
 
         let record = self
             .repository
-            .create(
+            .create(NewTransaction {
                 user_id,
-                input.transaction_type.as_str(),
-                input.description.trim(),
-                &amount,
-                &input.currency,
-                input.category.trim(),
+                transaction_type: input.transaction_type.as_str(),
+                description: input.description.trim(),
+                amount: &amount,
+                currency: &input.currency,
+                category: input.category.trim(),
                 occurred_at,
-            )
+            })
             .await
             .map_err(|error| Self::database_error(error, user_id, "create"))?;
 
@@ -124,12 +126,14 @@ impl TransactionService {
             .update_by_id_and_user(
                 id,
                 user_id,
-                transaction_type,
-                description,
-                amount.as_ref(),
-                input.currency.as_deref(),
-                category,
-                input.occurred_at,
+                TransactionChanges {
+                    transaction_type,
+                    description,
+                    amount: amount.as_ref(),
+                    currency: input.currency.as_deref(),
+                    category,
+                    occurred_at: input.occurred_at,
+                },
             )
             .await
             .map_err(|error| Self::database_error(error, user_id, "update"))?
