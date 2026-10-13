@@ -5,17 +5,16 @@ mod expense;
 mod middleware;
 mod state;
 
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::{
     Router, middleware as axum_middleware,
     routing::{delete, get, post},
 };
-
 use sqlx::postgres::PgPoolOptions;
-
+use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::trace::TraceLayer;
-
 use tracing_subscriber::EnvFilter;
 
 use config::Config;
@@ -23,18 +22,20 @@ use state::AppState;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = Config::from_env().expect("invalid application configuration");
-
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
         )
         .init();
 
+    let config = Config::from_env().expect("invalid application configuration");
+
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&config.database_url)
         .await?;
+
+    tracing::info!("Database connection pool established");
 
     let user_repository = auth::repository::UserRepository::new(pool.clone());
 
@@ -49,6 +50,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         expense_service: Arc::new(expense_service),
         jwt_secret: config.jwt_secret,
     };
+
+    let register_config = GovernorConfigBuilder::default()
+        .per_second(1)
+        .burst_size(5)
+        .finish()
+        .expect("valid registration rate-limit configuration");
+
+    let register_route = Router::new()
+        .route("/register", post(auth::handler::register))
+        .layer(GovernorLayer::new(register_config));
+
+    let login_config = GovernorConfigBuilder::default()
+        .per_second(1)
+        .burst_size(5)
+        .finish()
+        .expect("valid login rate-limit configuration");
+
+    let login_route = Router::new()
+        .route("/login", post(auth::handler::login))
+        .layer(GovernorLayer::new(login_config));
 
     let protected_routes = Router::new()
         .route("/profile", get(auth::handler::profile))
@@ -65,24 +86,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             middleware::auth_middleware,
         ));
 
-    let app = Router::new()
-        .route("/register", post(auth::handler::register))
-        .route("/login", post(auth::handler::login))
+    let app = register_route
+        .merge(login_route)
         .merge(protected_routes)
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
     let address = format!("{}:{}", config.bind_address, config.port);
 
-    let listener = tokio::net::TcpListener::bind(&address)
-        .await
-        .expect("failed to bind TCP listener");
+    let listener = tokio::net::TcpListener::bind(&address).await?;
 
     tracing::info!(%address, "HTTP server listening");
 
-    axum::serve(listener, app)
-        .await
-        .expect("HTTP server failed");
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
+
+    tracing::info!("HTTP server stopped");
 
     Ok(())
 }
