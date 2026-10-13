@@ -52,7 +52,7 @@ fn validate_amount_string(value: &str) -> Result<(), ValidationError> {
         .parse::<BigDecimal>()
         .map_err(|_| ValidationError::new("invalid_amount"))?;
 
-    if amount <= BigDecimal::from(0) {
+    if amount <= 0 {
         return Err(ValidationError::new("invalid_amount"));
     }
 
