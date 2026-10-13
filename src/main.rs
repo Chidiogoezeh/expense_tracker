@@ -46,15 +46,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let user_repository = auth::repository::UserRepository::new(pool.clone());
 
-    let expense_repository = transaction::repository::ExpenseRepository::new(pool.clone());
+    let transaction_repository = transaction::repository::TransactionRepository::new(pool.clone());
 
     let auth_service = auth::service::AuthService::new(user_repository, config.jwt_secret.clone());
 
-    let expense_service = transaction::service::ExpenseService::new(expense_repository);
+    let transaction_service = transaction::service::TransactionService::new(transaction_repository);
 
     let state = AppState {
         auth_service: Arc::new(auth_service),
-        expense_service: Arc::new(expense_service),
+        transaction_service: Arc::new(transaction_service),
         jwt_secret: config.jwt_secret,
     };
 

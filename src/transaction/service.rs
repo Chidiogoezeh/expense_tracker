@@ -1,151 +1,154 @@
+use bigdecimal::BigDecimal;
+use chrono::Utc;
 use uuid::Uuid;
 
-use crate::{error::AppError, transaction::repository::ExpenseRepository};
+use crate::{
+    error::AppError,
+    transaction::{
+        model::{
+            CreateTransactionRequest, TransactionRecord, TransactionResponse,
+            UpdateTransactionRequest,
+        },
+        repository::{TransactionFilters, TransactionRepository},
+    },
+};
 
-pub struct ExpenseService {
-    repository: ExpenseRepository,
+pub struct TransactionService {
+    repository: TransactionRepository,
 }
 
-impl ExpenseService {
-    pub fn new(repository: ExpenseRepository) -> Self {
+impl TransactionService {
+    pub fn new(repository: TransactionRepository) -> Self {
         Self { repository }
+    }
+
+    fn database_error(error: sqlx::Error, user_id: Uuid, operation: &'static str) -> AppError {
+        tracing::error!(
+            user_id = %user_id,
+            operation,
+            error = %error,
+            "Transaction database operation failed"
+        );
+        AppError::Database
+    }
+
+    fn to_response(record: TransactionRecord) -> Result<TransactionResponse, AppError> {
+        record.try_into()
     }
 
     pub async fn create(
         &self,
         user_id: Uuid,
-        description: String,
-        amount: f64,
-        category: String,
-    ) -> Result<ExpenseResult, AppError> {
-        let expense = self
+        input: CreateTransactionRequest,
+    ) -> Result<TransactionResponse, AppError> {
+        let amount = input
+            .amount
+            .parse::<BigDecimal>()
+            .map_err(|_| AppError::BadRequest)?;
+
+        let occurred_at = input.occurred_at.unwrap_or_else(Utc::now);
+
+        let record = self
             .repository
-            .create(user_id, description, amount, category)
+            .create(
+                user_id,
+                input.transaction_type.as_str(),
+                input.description.trim(),
+                &amount,
+                &input.currency,
+                input.category.trim(),
+                occurred_at,
+            )
             .await
-            .map_err(|error| {
-                tracing::error!(
-                    error = %error,
-                    user_id = %user_id,
-                    operation = "create_expense",
-                    "Database operation failed"
-                );
-                AppError::Database
-            })?;
+            .map_err(|error| Self::database_error(error, user_id, "create"))?;
 
-        tracing::info!(
-            user_id = %user_id,
-            "Expense created"
-        );
-
-        Ok(ExpenseResult {
-            id: expense.id,
-            description: expense.description,
-            amount: expense.amount,
-            category: expense.category,
-        })
+        Self::to_response(record)
     }
 
-    pub async fn get_all(&self, user_id: Uuid) -> Result<Vec<ExpenseResult>, AppError> {
-        let expenses = self
+    pub async fn get(&self, id: Uuid, user_id: Uuid) -> Result<TransactionResponse, AppError> {
+        let record = self
             .repository
-            .find_all_by_user(user_id)
+            .find_by_id_and_user(id, user_id)
             .await
-            .map_err(|error| {
-                tracing::error!(
-                    error = %error,
-                    user_id = %user_id,
-                    operation = "fetch_expenses",
-                    "Database operation failed"
-                );
-                AppError::Database
-            })?;
+            .map_err(|error| Self::database_error(error, user_id, "get"))?
+            .ok_or(AppError::NotFound)?;
 
-        Ok(expenses
-            .into_iter()
-            .map(|expense| ExpenseResult {
-                id: expense.id,
-                description: expense.description,
-                amount: expense.amount,
-                category: expense.category,
-            })
-            .collect())
+        Self::to_response(record)
     }
 
-    pub async fn delete(&self, expense_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+    pub async fn list(
+        &self,
+        user_id: Uuid,
+        filters: &TransactionFilters,
+    ) -> Result<Vec<TransactionResponse>, AppError> {
+        let records = self
+            .repository
+            .find_all_by_user(user_id, filters)
+            .await
+            .map_err(|error| Self::database_error(error, user_id, "list"))?;
+
+        records.into_iter().map(Self::to_response).collect()
+    }
+
+    pub async fn update(
+        &self,
+        id: Uuid,
+        user_id: Uuid,
+        input: UpdateTransactionRequest,
+    ) -> Result<TransactionResponse, AppError> {
+        if input.description.is_none()
+            && input.amount.is_none()
+            && input.category.is_none()
+            && input.currency.is_none()
+            && input.transaction_type.is_none()
+            && input.occurred_at.is_none()
+        {
+            return Err(AppError::BadRequest);
+        }
+
+        let amount = input
+            .amount
+            .as_deref()
+            .map(str::parse::<BigDecimal>)
+            .transpose()
+            .map_err(|_| AppError::BadRequest)?;
+
+        let transaction_type = input.transaction_type.map(|value| value.as_str());
+
+        let description = input.description.as_deref().map(str::trim);
+
+        let category = input.category.as_deref().map(str::trim);
+
+        let record = self
+            .repository
+            .update_by_id_and_user(
+                id,
+                user_id,
+                transaction_type,
+                description,
+                amount.as_ref(),
+                input.currency.as_deref(),
+                category,
+                input.occurred_at,
+            )
+            .await
+            .map_err(|error| Self::database_error(error, user_id, "update"))?
+            .ok_or(AppError::NotFound)?;
+
+        Self::to_response(record)
+    }
+
+    pub async fn delete(&self, id: Uuid, user_id: Uuid) -> Result<(), AppError> {
         let deleted = self
             .repository
-            .delete(expense_id, user_id)
+            .delete_by_id_and_user(id, user_id)
             .await
-            .map_err(|error| {
-                tracing::error!(
-                    error = %error,
-                    user_id = %user_id,
-                    operation = "delete_expense",
-                    "Database operation failed"
-                );
-                AppError::Database
-            })?;
+            .map_err(|error| Self::database_error(error, user_id, "delete"))?;
 
         if !deleted {
             return Err(AppError::NotFound);
         }
 
-        tracing::info!(
-            user_id = %user_id,
-            "Expense deleted"
-        );
-
         Ok(())
     }
-
-    pub async fn get_total(&self, user_id: Uuid) -> Result<f64, AppError> {
-        self.repository.get_total(user_id).await.map_err(|error| {
-            tracing::error!(
-                error = %error,
-                user_id = %user_id,
-                operation = "calculate_expense_total",
-                "Database operation failed"
-            );
-            AppError::Database
-        })
-    }
-
-    pub async fn get_category_totals(
-        &self,
-        user_id: Uuid,
-    ) -> Result<Vec<CategoryTotalResult>, AppError> {
-        let totals = self
-            .repository
-            .get_category_totals(user_id)
-            .await
-            .map_err(|error| {
-                tracing::error!(
-                    error = %error,
-                    user_id = %user_id,
-                    operation = "calculate_category_totals",
-                    "Database operation failed"
-                );
-                AppError::Database
-            })?;
-
-        Ok(totals
-            .into_iter()
-            .map(|item| CategoryTotalResult {
-                category: item.category,
-                total: item.total.unwrap_or(0.0),
-            })
-            .collect())
-    }
-}
-
-pub struct ExpenseResult {
-    pub id: Uuid,
-    pub description: String,
-    pub amount: f64,
-    pub category: String,
-}
-
-pub struct CategoryTotalResult {
-    pub category: String,
-    pub total: f64,
 }
