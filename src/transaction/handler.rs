@@ -86,10 +86,10 @@ pub async fn list_transactions(
         return Err(AppError::BadRequest);
     }
 
-    if let (Some(from), Some(to)) = (query.from, query.to) {
-        if from > to {
-            return Err(AppError::BadRequest);
-        }
+    if let (Some(from), Some(to)) = (query.from, query.to)
+        && from > to
+    {
+        return Err(AppError::BadRequest);
     }
 
     let from = query.from.map(|date| {

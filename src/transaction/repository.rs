@@ -5,6 +5,25 @@ use uuid::Uuid;
 
 use crate::transaction::model::TransactionRecord;
 
+pub struct NewTransaction<'a> {
+    pub user_id: Uuid,
+    pub transaction_type: &'a str,
+    pub description: &'a str,
+    pub amount: &'a BigDecimal,
+    pub currency: &'a str,
+    pub category: &'a str,
+    pub occurred_at: DateTime<Utc>,
+}
+
+pub struct TransactionChanges<'a> {
+    pub transaction_type: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub amount: Option<&'a BigDecimal>,
+    pub currency: Option<&'a str>,
+    pub category: Option<&'a str>,
+    pub occurred_at: Option<DateTime<Utc>>,
+}
+
 pub struct TransactionRepository {
     pool: PgPool,
 }
@@ -25,33 +44,27 @@ impl TransactionRepository {
 
     pub async fn create(
         &self,
-        user_id: Uuid,
-        transaction_type: &str,
-        description: &str,
-        amount: &BigDecimal,
-        currency: &str,
-        category: &str,
-        occurred_at: DateTime<Utc>,
+        input: NewTransaction<'_>,
     ) -> Result<TransactionRecord, sqlx::Error> {
         sqlx::query_as::<_, TransactionRecord>(
             r#"
-            INSERT INTO transactions
-                (id, user_id, "type", description, amount,
-                 currency, category, occurred_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id, user_id, "type" AS transaction_type,
-                      description, amount, currency, category,
-                      occurred_at, created_at
-            "#,
+        INSERT INTO transactions
+            (id, user_id, "type", description, amount,
+             currency, category, occurred_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id, user_id, "type" AS transaction_type,
+                  description, amount, currency, category,
+                  occurred_at, created_at
+        "#,
         )
         .bind(Uuid::new_v4())
-        .bind(user_id)
-        .bind(transaction_type)
-        .bind(description)
-        .bind(amount)
-        .bind(currency)
-        .bind(category)
-        .bind(occurred_at)
+        .bind(input.user_id)
+        .bind(input.transaction_type)
+        .bind(input.description)
+        .bind(input.amount)
+        .bind(input.currency)
+        .bind(input.category)
+        .bind(input.occurred_at)
         .fetch_one(&self.pool)
         .await
     }
@@ -111,36 +124,31 @@ impl TransactionRepository {
         &self,
         id: Uuid,
         user_id: Uuid,
-        transaction_type: Option<&str>,
-        description: Option<&str>,
-        amount: Option<&BigDecimal>,
-        currency: Option<&str>,
-        category: Option<&str>,
-        occurred_at: Option<DateTime<Utc>>,
+        changes: TransactionChanges<'_>,
     ) -> Result<Option<TransactionRecord>, sqlx::Error> {
         sqlx::query_as::<_, TransactionRecord>(
             r#"
-            UPDATE transactions
-            SET "type" = COALESCE($3, "type"),
-                description = COALESCE($4, description),
-                amount = COALESCE($5, amount),
-                currency = COALESCE($6, currency),
-                category = COALESCE($7, category),
-                occurred_at = COALESCE($8, occurred_at)
-            WHERE id = $1 AND user_id = $2
-            RETURNING id, user_id, "type" AS transaction_type,
-                      description, amount, currency, category,
-                      occurred_at, created_at
-            "#,
+        UPDATE transactions
+        SET "type" = COALESCE($3, "type"),
+            description = COALESCE($4, description),
+            amount = COALESCE($5, amount),
+            currency = COALESCE($6, currency),
+            category = COALESCE($7, category),
+            occurred_at = COALESCE($8, occurred_at)
+        WHERE id = $1 AND user_id = $2
+        RETURNING id, user_id, "type" AS transaction_type,
+                  description, amount, currency, category,
+                  occurred_at, created_at
+        "#,
         )
         .bind(id)
         .bind(user_id)
-        .bind(transaction_type)
-        .bind(description)
-        .bind(amount)
-        .bind(currency)
-        .bind(category)
-        .bind(occurred_at)
+        .bind(changes.transaction_type)
+        .bind(changes.description)
+        .bind(changes.amount)
+        .bind(changes.currency)
+        .bind(changes.category)
+        .bind(changes.occurred_at)
         .fetch_optional(&self.pool)
         .await
     }
