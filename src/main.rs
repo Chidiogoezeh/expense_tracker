@@ -16,8 +16,6 @@ use sqlx::postgres::PgPoolOptions;
 
 use tower_http::trace::TraceLayer;
 
-use tracing::info;
-
 use tracing_subscriber::EnvFilter;
 
 use config::Config;
@@ -25,7 +23,7 @@ use state::AppState;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = Config::from_env()?;
+    let config = Config::from_env().expect("invalid application configuration");
 
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -74,11 +72,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", config.port)).await?;
+    let address = format!("{}:{}", config.bind_address, config.port);
 
-    info!("Server running on http://127.0.0.1:{}", config.port);
+    let listener = tokio::net::TcpListener::bind(&address)
+        .await
+        .expect("failed to bind TCP listener");
 
-    axum::serve(listener, app).await?;
+    tracing::info!(%address, "HTTP server listening");
+
+    axum::serve(listener, app)
+        .await
+        .expect("HTTP server failed");
 
     Ok(())
 }
