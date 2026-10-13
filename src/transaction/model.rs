@@ -157,7 +157,6 @@ pub struct TransactionListResponse {
 #[derive(Debug, sqlx::FromRow)]
 pub struct TransactionRecord {
     pub id: Uuid,
-    pub user_id: Uuid,
     pub transaction_type: String,
     pub description: String,
     pub amount: BigDecimal,
