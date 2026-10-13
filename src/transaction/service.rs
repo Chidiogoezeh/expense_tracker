@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::{error::AppError, expense::repository::ExpenseRepository};
+use crate::{error::AppError, transaction::repository::ExpenseRepository};
 
 pub struct ExpenseService {
     repository: ExpenseRepository,

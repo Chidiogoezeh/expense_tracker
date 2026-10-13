@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{auth::service::AuthService, expense::service::ExpenseService};
+use crate::{auth::service::AuthService, transaction::service::ExpenseService};
 
 #[derive(Clone)]
 pub struct AppState {

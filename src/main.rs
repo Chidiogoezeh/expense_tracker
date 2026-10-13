@@ -1,9 +1,9 @@
 mod auth;
 mod config;
 mod error;
-mod expense;
 mod middleware;
 mod state;
+mod transaction;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -46,11 +46,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let user_repository = auth::repository::UserRepository::new(pool.clone());
 
-    let expense_repository = expense::repository::ExpenseRepository::new(pool.clone());
+    let expense_repository = transaction::repository::ExpenseRepository::new(pool.clone());
 
     let auth_service = auth::service::AuthService::new(user_repository, config.jwt_secret.clone());
 
-    let expense_service = expense::service::ExpenseService::new(expense_repository);
+    let expense_service = transaction::service::ExpenseService::new(expense_repository);
 
     let state = AppState {
         auth_service: Arc::new(auth_service),
@@ -80,13 +80,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let protected_routes = Router::new()
         .route("/profile", get(auth::handler::profile))
-        .route("/expenses", get(expense::handler::get_expenses))
-        .route("/expenses", post(expense::handler::create_expense))
-        .route("/expenses/{id}", delete(expense::handler::delete_expense))
-        .route("/expenses/total", get(expense::handler::get_total))
+        .route("/expenses", get(transaction::handler::get_expenses))
+        .route("/expenses", post(transaction::handler::create_expense))
+        .route(
+            "/expenses/{id}",
+            delete(transaction::handler::delete_expense),
+        )
+        .route("/expenses/total", get(transaction::handler::get_total))
         .route(
             "/expenses/categories",
-            get(expense::handler::get_category_totals),
+            get(transaction::handler::get_category_totals),
         )
         .layer(axum_middleware::from_fn_with_state(
             state.clone(),
