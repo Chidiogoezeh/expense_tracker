@@ -6,15 +6,17 @@ use validator::{Validate, ValidationError};
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum TransactionType {
-    INCOME,
-    EXPENSE,
+    #[serde(rename = "INCOME")]
+    Income,
+    #[serde(rename = "EXPENSE")]
+    Expense,
 }
 
 impl TransactionType {
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::INCOME => "INCOME",
-            Self::EXPENSE => "EXPENSE",
+            Self::Income => "INCOME",
+            Self::Expense => "EXPENSE",
         }
     }
 }
@@ -170,8 +172,8 @@ impl TryFrom<TransactionRecord> for TransactionResponse {
 
     fn try_from(record: TransactionRecord) -> Result<Self, Self::Error> {
         let transaction_type = match record.transaction_type.as_str() {
-            "INCOME" => TransactionType::INCOME,
-            "EXPENSE" => TransactionType::EXPENSE,
+            "INCOME" => TransactionType::Income,
+            "EXPENSE" => TransactionType::Expense,
             _ => return Err(crate::error::AppError::Internal),
         };
 
