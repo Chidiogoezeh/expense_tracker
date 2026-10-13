@@ -33,7 +33,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&config.database_url)
-        .await?;
+        .await
+        .map_err(|error| {
+            tracing::error!(
+                error = %error,
+                "Failed to connect to PostgreSQL"
+            );
+            error
+        })?;
 
     tracing::info!("Database connection pool established");
 
@@ -89,7 +96,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = register_route
         .merge(login_route)
         .merge(protected_routes)
-        .layer(TraceLayer::new_for_http())
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(|request: &axum::http::Request<_>| {
+                    tracing::info_span!(
+                        "http_request",
+                        method = %request.method(),
+                        path = %request.uri().path(),
+                    )
+                })
+                .on_response(
+                    tower_http::trace::DefaultOnResponse::new().level(tracing::Level::INFO),
+                ),
+        )
         .with_state(state);
 
     let address = format!("{}:{}", config.bind_address, config.port);
@@ -102,6 +121,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
+    .with_graceful_shutdown(async {
+        if tokio::signal::ctrl_c().await.is_ok() {
+            tracing::info!("Shutdown signal received");
+        }
+    })
     .await?;
 
     tracing::info!("HTTP server stopped");

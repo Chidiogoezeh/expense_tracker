@@ -9,7 +9,6 @@ use serde::Serialize;
 pub enum AppError {
     BadRequest,
     Unauthorized,
-    Forbidden,
     NotFound,
     Conflict,
     Database,
@@ -39,11 +38,6 @@ impl IntoResponse for AppError {
                 StatusCode::UNAUTHORIZED,
                 "unauthorized",
                 "Authentication is required or invalid",
-            ),
-            AppError::Forbidden => (
-                StatusCode::FORBIDDEN,
-                "forbidden",
-                "You are not allowed to perform this action",
             ),
             AppError::NotFound => (
                 StatusCode::NOT_FOUND,

@@ -22,7 +22,20 @@ impl ExpenseService {
             .repository
             .create(user_id, description, amount, category)
             .await
-            .map_err(|_| AppError::Database)?;
+            .map_err(|error| {
+                tracing::error!(
+                    error = %error,
+                    user_id = %user_id,
+                    operation = "create_expense",
+                    "Database operation failed"
+                );
+                AppError::Database
+            })?;
+
+        tracing::info!(
+            user_id = %user_id,
+            "Expense created"
+        );
 
         Ok(ExpenseResult {
             id: expense.id,
@@ -37,7 +50,15 @@ impl ExpenseService {
             .repository
             .find_all_by_user(user_id)
             .await
-            .map_err(|_| AppError::Database)?;
+            .map_err(|error| {
+                tracing::error!(
+                    error = %error,
+                    user_id = %user_id,
+                    operation = "fetch_expenses",
+                    "Database operation failed"
+                );
+                AppError::Database
+            })?;
 
         Ok(expenses
             .into_iter()
@@ -55,20 +76,38 @@ impl ExpenseService {
             .repository
             .delete(expense_id, user_id)
             .await
-            .map_err(|_| AppError::Database)?;
+            .map_err(|error| {
+                tracing::error!(
+                    error = %error,
+                    user_id = %user_id,
+                    operation = "delete_expense",
+                    "Database operation failed"
+                );
+                AppError::Database
+            })?;
 
         if !deleted {
             return Err(AppError::NotFound);
         }
 
+        tracing::info!(
+            user_id = %user_id,
+            "Expense deleted"
+        );
+
         Ok(())
     }
 
     pub async fn get_total(&self, user_id: Uuid) -> Result<f64, AppError> {
-        self.repository
-            .get_total(user_id)
-            .await
-            .map_err(|_| AppError::Database)
+        self.repository.get_total(user_id).await.map_err(|error| {
+            tracing::error!(
+                error = %error,
+                user_id = %user_id,
+                operation = "calculate_expense_total",
+                "Database operation failed"
+            );
+            AppError::Database
+        })
     }
 
     pub async fn get_category_totals(
@@ -79,7 +118,15 @@ impl ExpenseService {
             .repository
             .get_category_totals(user_id)
             .await
-            .map_err(|_| AppError::Database)?;
+            .map_err(|error| {
+                tracing::error!(
+                    error = %error,
+                    user_id = %user_id,
+                    operation = "calculate_category_totals",
+                    "Database operation failed"
+                );
+                AppError::Database
+            })?;
 
         Ok(totals
             .into_iter()

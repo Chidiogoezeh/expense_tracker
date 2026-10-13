@@ -36,7 +36,14 @@ impl AuthService {
             .repository
             .find_by_email(&email)
             .await
-            .map_err(|_| AppError::Database)?;
+            .map_err(|error| {
+                tracing::error!(
+                    error = %error,
+                    operation = "register_find_existing_user",
+                    "Database operation failed"
+                );
+                AppError::Database
+            })?;
 
         if existing.is_some() {
             return Err(AppError::Conflict);
@@ -48,7 +55,18 @@ impl AuthService {
             .repository
             .create(Uuid::new_v4(), &email, &password_hash)
             .await
-            .map_err(|_| AppError::Database)?;
+            .map_err(|error| {
+                tracing::error!(
+                    error = %error,
+                    operation = "register_create_user",
+                    "Database operation failed"
+                );
+                AppError::Database
+            })?;
+        tracing::info!(
+            user_id = %user.id,
+            "User registered"
+        );
 
         Ok(RegistrationResult {
             id: user.id,
@@ -63,7 +81,14 @@ impl AuthService {
             .repository
             .find_by_email(&email)
             .await
-            .map_err(|_| AppError::Database)?;
+            .map_err(|error| {
+                tracing::error!(
+                    error = %error,
+                    operation = "login_find_user",
+                    "Database operation failed"
+                );
+                AppError::Database
+            })?;
 
         let Some(user) = user else {
             return Err(AppError::Unauthorized);
@@ -75,15 +100,25 @@ impl AuthService {
             return Err(AppError::Unauthorized);
         }
 
-        create_token(user.id, &self.jwt_secret)
+        let token = create_token(user.id, &self.jwt_secret)?;
+
+        tracing::info!(
+            user_id = %user.id,
+            "User authenticated"
+        );
+
+        Ok(token)
     }
 
     pub async fn profile(&self, user_id: Uuid) -> Result<ProfileResult, AppError> {
-        let user = self
-            .repository
-            .find_by_id(user_id)
-            .await
-            .map_err(|_| AppError::Database)?;
+        let user = self.repository.find_by_id(user_id).await.map_err(|error| {
+            tracing::error!(
+                error = %error,
+                operation = "profile_find_user",
+                "Database operation failed"
+            );
+            AppError::Database
+        })?;
 
         let Some(user) = user else {
             return Err(AppError::NotFound);
