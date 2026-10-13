@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use axum::{
     Router, middleware as axum_middleware,
-    routing::{delete, get, post},
+    routing::{get, post},
 };
 use sqlx::postgres::PgPoolOptions;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
@@ -80,17 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let protected_routes = Router::new()
         .route("/profile", get(auth::handler::profile))
-        .route("/expenses", get(transaction::handler::get_expenses))
-        .route("/expenses", post(transaction::handler::create_expense))
-        .route(
-            "/expenses/{id}",
-            delete(transaction::handler::delete_expense),
-        )
-        .route("/expenses/total", get(transaction::handler::get_total))
-        .route(
-            "/expenses/categories",
-            get(transaction::handler::get_category_totals),
-        )
+        .merge(transaction::handler::routes())
         .layer(axum_middleware::from_fn_with_state(
             state.clone(),
             middleware::auth_middleware,
