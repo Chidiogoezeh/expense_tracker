@@ -3,6 +3,8 @@ use argon2::{
     password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
 };
 
+use std::sync::OnceLock;
+
 use jsonwebtoken::{Algorithm, EncodingKey, Header, encode, get_current_timestamp};
 
 use uuid::Uuid;
@@ -98,6 +100,8 @@ impl AuthService {
             })?;
 
         let Some(user) = user else {
+            let dummy_hash = dummy_password_hash()?;
+            let _ = verify_password(password, dummy_hash)?;
             return Err(AppError::Unauthorized);
         };
 
@@ -161,6 +165,16 @@ fn verify_password(password: &str, stored_hash: &str) -> Result<bool, AppError> 
     Ok(Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok())
+}
+
+fn dummy_password_hash() -> Result<&'static str, AppError> {
+    static DUMMY_HASH: OnceLock<Result<String, ()>> = OnceLock::new();
+
+    DUMMY_HASH
+        .get_or_init(|| hash_password("dummy-password-not-used").map_err(|_| ()))
+        .as_ref()
+        .map(String::as_str)
+        .map_err(|_| AppError::Internal)
 }
 
 fn create_token(user_id: Uuid, jwt_secret: &str) -> Result<String, AppError> {
