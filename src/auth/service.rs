@@ -56,11 +56,18 @@ impl AuthService {
             .create(Uuid::new_v4(), &email, &password_hash)
             .await
             .map_err(|error| {
+                if let sqlx::Error::Database(db_error) = &error {
+                    if db_error.is_unique_violation() {
+                        return AppError::Conflict;
+                    }
+                }
+
                 tracing::error!(
                     error = %error,
                     operation = "register_create_user",
                     "Database operation failed"
                 );
+
                 AppError::Database
             })?;
         tracing::info!(
