@@ -47,8 +47,6 @@ pub async fn register(
     State(state): State<AppState>,
     Json(input): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<RegistrationResponse>), AppError> {
-    info!("Registration request received");
-
     input.validate().map_err(|_| {
         warn!("Registration validation failed");
         AppError::BadRequest
@@ -77,8 +75,6 @@ pub async fn login(
     State(state): State<AppState>,
     Json(input): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, AppError> {
-    info!("Login request received");
-
     input.validate().map_err(|_| {
         warn!("Login validation failed");
         AppError::BadRequest
