@@ -156,7 +156,7 @@ fn validate_input(input: BudgetInput) -> Result<ValidatedBudget, AppError> {
     let amount_limit =
         BigDecimal::from_str(input.amount_limit.trim()).map_err(|_| AppError::BadRequest)?;
 
-    if amount_limit <= BigDecimal::from(0) {
+    if amount_limit <= 0 {
         return Err(AppError::BadRequest);
     }
 

@@ -184,10 +184,10 @@ fn map_read_error(error: sqlx::Error) -> AppError {
 }
 
 fn map_write_error(error: sqlx::Error) -> AppError {
-    if let sqlx::Error::Database(db_error) = &error {
-        if db_error.is_unique_violation() {
-            return AppError::Conflict;
-        }
+    if let sqlx::Error::Database(db_error) = &error
+        && db_error.is_unique_violation()
+    {
+        return AppError::Conflict;
     }
 
     tracing::error!(error = %error, "Budget database write failed");
