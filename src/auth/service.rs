@@ -58,10 +58,10 @@ impl AuthService {
             .create(Uuid::new_v4(), &email, &password_hash)
             .await
             .map_err(|error| {
-                if let sqlx::Error::Database(db_error) = &error {
-                    if db_error.is_unique_violation() {
-                        return AppError::Conflict;
-                    }
+                if let sqlx::Error::Database(db_error) = &error
+                    && db_error.is_unique_violation()
+                {
+                    return AppError::Conflict;
                 }
 
                 tracing::error!(
