@@ -41,10 +41,14 @@ pub async fn auth_middleware(
         return Err(AppError::Unauthorized);
     }
 
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.algorithms = vec![Algorithm::HS256];
+    validation.validate_exp = true;
+
     let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(state.jwt_secret.as_bytes()),
-        &Validation::new(Algorithm::HS256),
+        &validation,
     )
     .map_err(|_| {
         tracing::warn!("Authentication rejected: invalid or expired token");
