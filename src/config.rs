@@ -21,8 +21,11 @@ impl Config {
         let database_url = required("DATABASE_URL")?;
         let jwt_secret = required("JWT_SECRET")?;
 
-        if jwt_secret.trim().len() < 32 {
-            return Err("JWT_SECRET must contain at least 32 non-whitespace bytes".to_string());
+        if jwt_secret.len() < 32 || jwt_secret.trim() != jwt_secret {
+            return Err(
+                "JWT_SECRET must be at least 32 bytes and have no surrounding whitespace"
+                    .to_string(),
+            );
         }
 
         let port = match env::var("PORT") {
