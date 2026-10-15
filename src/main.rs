@@ -72,7 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let register_config = GovernorConfigBuilder::default()
         .per_second(1)
-        .burst_size(5)
+        .burst_size(3)
         .finish()
         .expect("valid registration rate-limit configuration");
 
@@ -82,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let login_config = GovernorConfigBuilder::default()
         .per_second(1)
-        .burst_size(5)
+        .burst_size(3)
         .finish()
         .expect("valid login rate-limit configuration");
 
