@@ -1,4 +1,5 @@
 mod auth;
+mod budget;
 mod config;
 mod dashboard;
 mod error;
@@ -53,6 +54,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let dashboard_service = dashboard::service::DashboardService::new(dashboard_repository);
 
+    let budget_repository = budget::repository::BudgetRepository::new(pool.clone());
+
+    let budget_service = budget::service::BudgetService::new(budget_repository);
+
     let auth_service = auth::service::AuthService::new(user_repository, config.jwt_secret.clone());
 
     let transaction_service = transaction::service::TransactionService::new(transaction_repository);
@@ -61,6 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         auth_service: Arc::new(auth_service),
         transaction_service: Arc::new(transaction_service),
         dashboard_service: Arc::new(dashboard_service),
+        budget_service: Arc::new(budget_service),
         jwt_secret: config.jwt_secret,
     };
 
@@ -88,6 +94,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/profile", get(auth::handler::profile))
         .merge(transaction::handler::routes())
         .merge(dashboard::routes())
+        .merge(budget::routes())
         .layer(axum_middleware::from_fn_with_state(
             state.clone(),
             middleware::auth_middleware,
