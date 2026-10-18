@@ -5,10 +5,12 @@ use uuid::Uuid;
 use axum::{
     Router,
     body::Body,
+    extract::ConnectInfo,
     http::{Method, Request, StatusCode, header},
 };
 use http_body_util::BodyExt;
 use sqlx::postgres::PgPoolOptions;
+use std::net::SocketAddr;
 use tower::ServiceExt;
 
 use expense_tracker::{
@@ -149,6 +151,7 @@ pub async fn send_request(
     }
 
     let request = builder
+        .extension(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 40000))))
         .body(body)
         .expect("Could not build HTTP test request");
 
