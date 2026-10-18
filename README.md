@@ -52,8 +52,6 @@ The project is evolving from an expense tracker into a backend for managing inco
 - Environment-based configuration
 - Shared application state and dependency injection
 
-> **Implementation status:** Update the feature lists above to match the endpoints and tests currently working in your codebase. Features that are still being developed should be moved to the roadmap below.
-
 ## Architecture
 
 The application follows a layered architecture:
