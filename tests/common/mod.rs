@@ -3,12 +3,10 @@ use std::time::Duration;
 use axum::{
     Router,
     body::Body,
-    extract::ConnectInfo,
     http::{Method, Request, StatusCode, header},
 };
 use http_body_util::BodyExt;
 use sqlx::postgres::PgPoolOptions;
-use std::net::SocketAddr;
 use tower::ServiceExt;
 
 use expense_tracker::{
@@ -99,9 +97,6 @@ pub async fn send_request(
     if let Some(token) = token {
         builder = builder.header(header::AUTHORIZATION, format!("Bearer {token}"));
     }
-
-    // The app uses IP-based rate limiting on authentication routes.
-    builder = builder.extension(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 40000))));
 
     let request = builder
         .body(body)
