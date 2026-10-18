@@ -1,4 +1,6 @@
+use serde_json::{Value, json};
 use std::time::Duration;
+use uuid::Uuid;
 
 use axum::{
     Router,
@@ -25,6 +27,54 @@ pub struct TestApp {
 pub struct TestResponse {
     pub status: StatusCode,
     pub body: String,
+}
+
+#[allow(dead_code)]
+pub async fn register_and_login(router: Router) -> (Router, String) {
+    let email = format!("user-{}@example.com", Uuid::new_v4());
+
+    let registration = send_request(
+        router.clone(),
+        Method::POST,
+        "/register",
+        None,
+        Some(json!({
+            "email": email,
+            "password": "StrongPassword123"
+        })),
+    )
+    .await;
+
+    assert_eq!(
+        registration.status,
+        StatusCode::CREATED,
+        "Registration failed: {}",
+        registration.body
+    );
+
+    let login = send_request(
+        router.clone(),
+        Method::POST,
+        "/login",
+        None,
+        Some(json!({
+            "email": email,
+            "password": "StrongPassword123"
+        })),
+    )
+    .await;
+
+    assert_eq!(login.status, StatusCode::OK, "Login failed: {}", login.body);
+
+    let response: Value =
+        serde_json::from_str(&login.body).expect("Login response must be valid JSON");
+
+    let token = response["token"]
+        .as_str()
+        .expect("Login response must contain a string field named token")
+        .to_string();
+
+    (router, token)
 }
 
 pub async fn test_app() -> TestApp {
