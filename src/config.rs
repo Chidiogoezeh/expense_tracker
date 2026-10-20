@@ -44,7 +44,7 @@ impl Config {
             Err(_) => return Err("PORT contains invalid Unicode".to_string()),
         };
 
-        let bind_address = env::var("BIND_ADDRESS").unwrap_or_else(|_| "127.0.0.1".to_string());
+        let bind_address = env::var("BIND_ADDRESS").unwrap_or_else(|_| "0.0.0.0".to_string());
 
         if bind_address.trim().is_empty() {
             return Err("BIND_ADDRESS must not be empty".to_string());

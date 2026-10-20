@@ -12,7 +12,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .init();
 
-    let config = Config::from_env().expect("invalid application configuration");
+    let config = Config::from_env().map_err(|error| {
+        tracing::error!(reason = %error, "Invalid application configuration");
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "invalid application configuration",
+        )
+    })?;
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
@@ -27,6 +33,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })?;
 
     tracing::info!("Database connection pool established");
+
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .map_err(|error| {
+            tracing::error!(
+                error = %error,
+                "Database migrations failed"
+            );
+            error
+        })?;
+
+    tracing::info!("Database migrations completed successfully");
 
     let user_repository = auth::repository::UserRepository::new(pool.clone());
 
