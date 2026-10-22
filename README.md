@@ -1,47 +1,60 @@
-# Expense Tracker API
+# Personal Finance API
 
-A RESTful **Expense Tracker API built with Rust**, developed throughout my **12-Week Rust Backend Learning Roadmap**.
+A RESTful personal finance API built with Rust as part of my **12-Week Rust Backend Learning Roadmap**.
 
-The project evolved from a Rust CLI application into an authenticated backend API using **Axum, PostgreSQL, SQLx, JWT, Argon2, validation, structured logging, and production-style application architecture**.
+The project is evolving from an expense tracker into a backend for managing income, expenses, transactions, budgets, and financial summaries using **Rust, Axum, PostgreSQL, SQLx, JWT, and Argon2**.
 
 ## Current Features
 
-### Authentication
+### Authentication and Security
 
 - User registration and login
 - Argon2 password hashing
 - JWT authentication
-- Protected routes
+- Protected endpoints
 - User profile
-- User-owned expenses
+- User-scoped financial data access
 
-### Expenses
+### Transactions
 
-- Create expenses
-- List expenses
-- Delete expenses
-- Calculate total expenses
-- Calculate totals by category
-- Expense validation
-- Users can only access their own expenses
+- Unified transaction model for income and expenses
+- Create, list, retrieve, update, and delete transactions
+- Transaction categories
+- Transaction types: `INCOME` and `EXPENSE`
+- Validation of transaction data
+- User ownership enforced through authenticated requests
+
+### Dashboard and Reports
+
+- Total income
+- Total expenses
+- Net cash flow
+- Spending summaries by category
+- Date-filtered financial reports
+
+### Budgets
+
+- Create and manage monthly budgets
+- Set spending limits by category
+- Track spending against budget limits
 
 ### Backend
 
-- Rust + Axum
-- PostgreSQL + SQLx
+- Rust and Axum
+- PostgreSQL and SQLx
 - Database migrations
-- Async request handling with Tokio
+- Asynchronous request handling with Tokio
 - Centralized application errors
 - Request validation
 - Structured logging with `tracing`
 - Authentication middleware
 - Service and repository layers
-- Application configuration
-- Dependency injection
+- Environment-based configuration
+- Shared application state and dependency injection
 
 ## Architecture
 
-The project now follows a simple layered architecture:
+The application follows a layered architecture:
 
 ```text
 HTTP Request
@@ -57,143 +70,81 @@ Repository
 PostgreSQL
 ```
 
-### Configuration
+- **Handlers** process HTTP requests and responses.
+- **Services** contain business logic.
+- **Repositories** execute database operations through SQLx.
+- **Middleware** handles cross-cutting request concerns, including authentication.
+- **AppState** provides shared application dependencies.
 
-Application configuration is loaded from environment variables:
+## Data Model
 
-```text
-.env
- ↓
-Config
- ↓
-AppState
-```
+The application uses a unified `transactions` table instead of separate income and expense tables. An expense is a transaction whose type is `EXPENSE`; income uses `INCOME`.
 
-Configuration includes:
+The core entities are:
 
-```env
-DATABASE_URL=...
-JWT_SECRET=...
-PORT=3000
-```
+- **Users:** Account identity and authentication data.
+- **Transactions:** Income and expense records, including amount, category, currency, and transaction date.
+- **Budgets:** Monthly spending limits associated with a user, category, and currency.
 
-### Dependency Injection
-
-Application dependencies are created during startup and passed into the application state.
-
-```text
-main.rs
-   ↓
-Config
-   ↓
-Database Pool
-   ↓
-Repositories
-   ↓
-Services
-   ↓
-AppState
-   ↓
-Handlers
-```
-
-### Service Layer
-
-Services contain application and business logic.
-
-```text
-auth/service.rs
-expense/service.rs
-```
-
-Examples:
-
-- Registering users
-- Verifying passwords
-- Creating JWTs
-- Creating expenses
-- Deleting expenses
-- Calculating expense totals
-
-### Repository Layer
-
-Repositories contain database operations.
-
-```text
-auth/repository.rs
-expense/repository.rs
-```
-
-They are responsible for executing SQL queries through SQLx.
+Financial records are associated with their owner. Queries for private data must be scoped to the authenticated user's ID.
 
 ## API
 
 ### Authentication
 
-```text
-POST /register
-POST /login
-GET  /profile
-```
+| Method | Endpoint    | Purpose                                   |
+| ------ | ----------- | ----------------------------------------- |
+| `POST` | `/register` | Register an account                       |
+| `POST` | `/login`    | Authenticate and obtain a JWT             |
+| `GET`  | `/profile`  | Retrieve the authenticated user's profile |
 
-### Expenses
+### Transactions
 
-```text
-POST   /expenses
-GET    /expenses
-DELETE /expenses/:id
-GET    /expenses/total
-GET    /expenses/categories
-```
+| Method   | Endpoint             | Purpose                |
+| -------- | -------------------- | ---------------------- |
+| `POST`   | `/transactions`      | Create a transaction   |
+| `GET`    | `/transactions`      | List transactions      |
+| `GET`    | `/transactions/{id}` | Retrieve a transaction |
+| `PATCH`  | `/transactions/{id}` | Update a transaction   |
+| `DELETE` | `/transactions/{id}` | Delete a transaction   |
 
-`/register` and `/login` are public.
+Transaction listing is intended to support filtering by type, category, and date range, with pagination.
 
-`/profile` and all expense endpoints require:
+### Dashboard and Reports
+
+| Method | Endpoint              | Purpose                                       |
+| ------ | --------------------- | --------------------------------------------- |
+| `GET`  | `/dashboard/summary`  | Summarize income, expenses, and net cash flow |
+| `GET`  | `/reports/categories` | Summarize expenses by category                |
+
+### Budgets
+
+| Method   | Endpoint        | Purpose         |
+| -------- | --------------- | --------------- |
+| `GET`    | `/budgets`      | List budgets    |
+| `POST`   | `/budgets`      | Create a budget |
+| `PATCH`  | `/budgets/{id}` | Update a budget |
+| `DELETE` | `/budgets/{id}` | Delete a budget |
+
+All endpoints except registration and login require a valid bearer token.
 
 ```http
 Authorization: Bearer <JWT>
 ```
 
-### Create Expense
+## Configuration
 
-```http
-POST /expenses
-Authorization: Bearer <JWT>
-Content-Type: application/json
+The application reads its configuration from environment variables.
+
+```env
+DATABASE_URL=postgres://postgres:YOUR_PASSWORD@localhost:5432/expense_tracker
+JWT_SECRET=your-long-random-secret__generate using random key generator
+PORT=3000
 ```
 
-```json
-{
-  "description": "Lunch",
-  "amount": 5000,
-  "category": "Food"
-}
-```
+Keep `.env` out of version control. Use a strong secret and environment-specific configuration outside local development.
 
-The authenticated user's ID is obtained from the JWT. The client does not provide `user_id`.
-
-## Database
-
-The application uses PostgreSQL with SQLx.
-
-```sql
-CREATE TABLE users (
-    id UUID PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE expenses (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    description TEXT NOT NULL,
-    amount DOUBLE PRECISION NOT NULL,
-    category TEXT NOT NULL
-);
-```
-
-Each expense belongs to a user through `user_id`.
+## Database Migrations
 
 Database migrations are stored in:
 
@@ -201,11 +152,13 @@ Database migrations are stored in:
 migrations/
 ```
 
-Run them with:
+Apply migrations using SQLx:
 
 ```bash
 sqlx migrate run
 ```
+
+Set `DATABASE_URL` before running the migration command. Apply migrations against the intended development database, and back up data before making destructive schema changes.
 
 ## Project Structure
 
@@ -218,7 +171,18 @@ expense_tracker/
 │   │   ├── repository.rs
 │   │   ├── service.rs
 │   │   └── mod.rs
-│   ├── expense/
+│   ├── transaction/
+│   │   ├── handler.rs
+│   │   ├── repository.rs
+│   │   ├── service.rs
+│   │   ├── model.rs
+│   │   └── mod.rs
+│   ├── budget/
+│   │   ├── handler.rs
+│   │   ├── repository.rs
+│   │   ├── service.rs
+│   │   └── mod.rs
+│   ├── dashboard/
 │   │   ├── handler.rs
 │   │   ├── repository.rs
 │   │   ├── service.rs
@@ -228,86 +192,65 @@ expense_tracker/
 │   ├── middleware.rs
 │   ├── state.rs
 │   └── main.rs
-├── .env
+├── .env.example
 ├── .gitignore
 ├── Cargo.toml
 └── Cargo.lock
 ```
 
-## How to Run
+## Running Locally
 
-Create a PostgreSQL database and configure `.env`:
+### Prerequisites
 
-```env
-DATABASE_URL=postgres://postgres:YOUR_PASSWORD@localhost/expense_tracker
-JWT_SECRET=your-long-random-secret
-PORT=3000
+- Rust and Cargo
+- PostgreSQL
+- SQLx CLI
+
+Install the SQLx CLI if needed:
+
+```bash
+cargo install sqlx-cli --no-default-features --features postgres,rustls
 ```
 
-Run migrations:
+Create a PostgreSQL database, configure the environment variables, and apply migrations:
 
 ```bash
 sqlx migrate run
-```
-
-Start the API:
-
-```bash
 cargo run
 ```
 
-The API runs at:
+The API is expected at:
 
 ```text
 http://127.0.0.1:3000
 ```
 
-## Development Checks
+### Development Checks
+
+Run these checks before committing changes:
 
 ```bash
 cargo fmt --check
 cargo check
-cargo clippy
+cargo clippy --all-targets --all-features -- -D warnings
 cargo test
 ```
 
-## Week 10 Learning Goal
+## Remaining Work
 
-Week 10 focuses on moving the application toward a production-style architecture:
+The following items are **not yet completed** and remain part of the production-readiness roadmap:
 
-- Configuration
-- Dependency injection
-- Service layer
-- Repository layer
-
-The resulting request flow is:
-
-```text
-Request
-   ↓
-Middleware
-   ↓
-Handler
-   ↓
-Service
-   ↓
-Repository
-   ↓
-PostgreSQL
-```
-
-This keeps HTTP handling, business logic, database operations, and application configuration separated.
+- Complete OpenAPI documentation and Swagger UI
+- Dockerfile and Docker Compose configuration
+- Health and readiness checks
+- Reliable startup, database connectivity checks, and graceful shutdown
+- End-to-end verification of the Docker workflow
+- GitHub Actions CI for formatting, linting, tests, and builds
+- Deployment to a test environment
+- Deployment and database migration documentation
 
 ## Roadmap
 
-Upcoming improvements include:
+The goal is to build a maintainable, secure personal finance backend with reliable transaction management, budgeting, financial summaries, automated testing, and reproducible deployment.
 
-- Automated tests
-- Docker and Docker Compose
-- API documentation
-- Deployment
-- Further authentication and security improvements
-
----
-
-**Part of my 12-Week Rust Backend Learning Roadmap.**
+Bank integrations, payment processing, AI financial advice, OCR, and microservices are outside the current scope.
