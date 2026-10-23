@@ -28,6 +28,7 @@ pub fn build_app(state: AppState) -> Router {
         .expect("valid registration rate-limit configuration");
 
     let register_route = Router::new()
+        .route("/health", get(health::health))
         .route("/register", post(auth::handler::register))
         .layer(GovernorLayer::new(register_config));
 
