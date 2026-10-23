@@ -1,8 +1,6 @@
 use argon2::{
     Argon2,
-    password_hash::{
-        PasswordHasher, PasswordVerifier, SaltString, phc::PasswordHash, rand_core::OsRng,
-    },
+    password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
 };
 
 use std::sync::OnceLock;
@@ -155,10 +153,8 @@ pub struct ProfileResult {
 }
 
 fn hash_password(password: &str) -> Result<String, AppError> {
-    let salt = SaltString::generate(&mut OsRng);
-
     Argon2::default()
-        .hash_password(password.as_bytes(), &salt)
+        .hash_password(password.as_bytes())
         .map(|hash| hash.to_string())
         .map_err(|error| {
             tracing::error!(error = %error, "Password hashing failed");
@@ -172,14 +168,9 @@ fn verify_password(password: &str, stored_hash: &str) -> Result<bool, AppError> 
         AppError::Internal
     })?;
 
-    match Argon2::default().verify_password(password.as_bytes(), &parsed_hash) {
-        Ok(()) => Ok(true),
-        Err(argon2::password_hash::Error::Password) => Ok(false),
-        Err(error) => {
-            tracing::error!(error = %error, "Password verification failed");
-            Err(AppError::Internal)
-        }
-    }
+    Ok(Argon2::default()
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok())
 }
 
 fn dummy_password_hash() -> Result<&'static str, AppError> {
