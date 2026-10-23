@@ -117,6 +117,7 @@ pub async fn test_app() -> TestApp {
     let budget_service = BudgetService::new(BudgetRepository::new(pool.clone()));
 
     let state = AppState {
+        db: pool.clone(),
         auth_service: std::sync::Arc::new(auth_service),
         transaction_service: std::sync::Arc::new(transaction_service),
         dashboard_service: std::sync::Arc::new(dashboard_service),
