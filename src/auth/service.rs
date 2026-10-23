@@ -1,6 +1,8 @@
 use argon2::{
     Argon2,
-    password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
+    password_hash::{
+        PasswordHasher, PasswordVerifier, SaltString, phc::PasswordHash, rand_core::OsRng,
+    },
 };
 
 use std::sync::OnceLock;
@@ -153,18 +155,31 @@ pub struct ProfileResult {
 }
 
 fn hash_password(password: &str) -> Result<String, AppError> {
+    let salt = SaltString::generate(&mut OsRng);
+
     Argon2::default()
-        .hash_password(password.as_bytes())
+        .hash_password(password.as_bytes(), &salt)
         .map(|hash| hash.to_string())
-        .map_err(|_| AppError::Internal)
+        .map_err(|error| {
+            tracing::error!(error = %error, "Password hashing failed");
+            AppError::Internal
+        })
 }
 
 fn verify_password(password: &str, stored_hash: &str) -> Result<bool, AppError> {
-    let parsed_hash = PasswordHash::new(stored_hash).map_err(|_| AppError::Internal)?;
+    let parsed_hash = PasswordHash::new(stored_hash).map_err(|error| {
+        tracing::error!(error = %error, "Stored password hash is invalid");
+        AppError::Internal
+    })?;
 
-    Ok(Argon2::default()
-        .verify_password(password.as_bytes(), &parsed_hash)
-        .is_ok())
+    match Argon2::default().verify_password(password.as_bytes(), &parsed_hash) {
+        Ok(()) => Ok(true),
+        Err(argon2::password_hash::Error::Password) => Ok(false),
+        Err(error) => {
+            tracing::error!(error = %error, "Password verification failed");
+            Err(AppError::Internal)
+        }
+    }
 }
 
 fn dummy_password_hash() -> Result<&'static str, AppError> {
