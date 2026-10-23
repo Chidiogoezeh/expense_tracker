@@ -3,6 +3,7 @@ pub mod budget;
 pub mod config;
 pub mod dashboard;
 pub mod error;
+pub mod health;
 pub mod middleware;
 pub mod state;
 pub mod transaction;
