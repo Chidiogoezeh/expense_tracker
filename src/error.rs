@@ -4,6 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
+use utoipa::ToSchema;
 
 #[derive(Debug)]
 pub enum AppError {
@@ -15,15 +16,15 @@ pub enum AppError {
     Internal,
 }
 
-#[derive(Serialize)]
-struct ErrorResponse {
-    error: ErrorBody,
+#[derive(Serialize, ToSchema)]
+pub struct ErrorResponse {
+    pub error: ErrorBody,
 }
 
-#[derive(Serialize)]
-struct ErrorBody {
-    code: &'static str,
-    message: &'static str,
+#[derive(Serialize, ToSchema)]
+pub struct ErrorBody {
+    pub code: &'static str,
+    pub message: &'static str,
 }
 
 impl IntoResponse for AppError {

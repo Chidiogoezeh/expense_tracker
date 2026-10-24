@@ -1,0 +1,30 @@
+use crate::AppState;
+use axum::{extract::State, http::StatusCode};
+use sqlx::query_scalar;
+use tracing::warn;
+
+#[utoipa::path(
+    get,
+    path = "/health",
+    responses(
+        (status = 200, description = "API and database are healthy"),
+        (status = 503, description = "Database is unavailable")
+    ),
+    tag = "Health"
+)]
+pub async fn health(State(state): State<AppState>) -> StatusCode {
+    match query_scalar::<_, i32>("SELECT 1")
+        .fetch_one(&state.db)
+        .await
+    {
+        Ok(1) => StatusCode::OK,
+        Ok(_) => {
+            warn!("Database health check returned an unexpected result");
+            StatusCode::SERVICE_UNAVAILABLE
+        }
+        Err(_) => {
+            warn!("Database health check failed");
+            StatusCode::SERVICE_UNAVAILABLE
+        }
+    }
+}

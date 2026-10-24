@@ -1,3 +1,5 @@
+use super::service::{BudgetInput, BudgetPatch};
+use crate::{error::AppError, middleware::AuthUser, state::AppState};
 use axum::{
     Extension, Json,
     extract::{Path, State},
@@ -5,13 +7,10 @@ use axum::{
 };
 use chrono::NaiveDate;
 use serde::Deserialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::{error::AppError, middleware::AuthUser, state::AppState};
-
-use super::service::{BudgetInput, BudgetPatch};
-
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateBudgetRequest {
     category: String,
     amount_limit: String,
@@ -19,7 +18,7 @@ pub struct CreateBudgetRequest {
     month: NaiveDate,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct UpdateBudgetRequest {
     category: Option<String>,
     amount_limit: Option<String>,
@@ -27,6 +26,17 @@ pub struct UpdateBudgetRequest {
     month: Option<NaiveDate>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/budgets",
+    responses(
+        (status = 200, description = "User's budgets", body = [super::service::BudgetResponse]),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Budgets"
+)]
 pub async fn list(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -34,6 +44,20 @@ pub async fn list(
     Ok(Json(state.budget_service.list(user.id).await?))
 }
 
+#[utoipa::path(
+    post,
+    path = "/budgets",
+    request_body = CreateBudgetRequest,
+    responses(
+        (status = 201, description = "Budget created", body = super::service::BudgetResponse),
+        (status = 400, description = "Invalid budget data", body = crate::error::ErrorResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 409, description = "Budget conflicts with an existing budget", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Budgets"
+)]
 pub async fn create(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -55,6 +79,23 @@ pub async fn create(
     Ok((StatusCode::CREATED, Json(budget)))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/budgets/{id}",
+    params(
+        ("id" = Uuid, Path, description = "Budget ID")
+    ),
+    request_body = UpdateBudgetRequest,
+    responses(
+        (status = 200, description = "Budget updated", body = super::service::BudgetResponse),
+        (status = 400, description = "Invalid budget data", body = crate::error::ErrorResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 404, description = "Budget not found", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Budgets"
+)]
 pub async fn update(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -78,6 +119,21 @@ pub async fn update(
     Ok(Json(budget))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/budgets/{id}",
+    params(
+        ("id" = Uuid, Path, description = "Budget ID")
+    ),
+    responses(
+        (status = 204, description = "Budget deleted"),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 404, description = "Budget not found", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Budgets"
+)]
 pub async fn delete(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,

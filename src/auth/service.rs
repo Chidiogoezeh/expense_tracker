@@ -1,18 +1,14 @@
-use argon2::{
-    Argon2,
-    password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
-};
-
-use std::sync::OnceLock;
-
-use jsonwebtoken::{Algorithm, EncodingKey, Header, encode, get_current_timestamp};
-
-use uuid::Uuid;
-
 use crate::{
     auth::{Claims, repository::UserRepository},
     error::AppError,
 };
+use argon2::{
+    Argon2,
+    password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
+};
+use jsonwebtoken::{Algorithm, EncodingKey, Header, encode, get_current_timestamp};
+use std::sync::OnceLock;
+use uuid::Uuid;
 
 pub struct AuthService {
     repository: UserRepository,
@@ -156,11 +152,17 @@ fn hash_password(password: &str) -> Result<String, AppError> {
     Argon2::default()
         .hash_password(password.as_bytes())
         .map(|hash| hash.to_string())
-        .map_err(|_| AppError::Internal)
+        .map_err(|error| {
+            tracing::error!(error = %error, "Password hashing failed");
+            AppError::Internal
+        })
 }
 
 fn verify_password(password: &str, stored_hash: &str) -> Result<bool, AppError> {
-    let parsed_hash = PasswordHash::new(stored_hash).map_err(|_| AppError::Internal)?;
+    let parsed_hash = PasswordHash::new(stored_hash).map_err(|error| {
+        tracing::error!(error = %error, "Stored password hash is invalid");
+        AppError::Internal
+    })?;
 
     Ok(Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)

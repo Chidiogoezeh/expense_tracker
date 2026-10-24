@@ -1,7 +1,6 @@
-use std::{net::SocketAddr, sync::Arc};
-
 use expense_tracker::{AppState, auth, budget, build_app, config::Config, dashboard, transaction};
 use sqlx::postgres::PgPoolOptions;
+use std::{net::SocketAddr, sync::Arc};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -12,7 +11,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .init();
 
-    let config = Config::from_env().expect("invalid application configuration");
+    let config = Config::from_env().map_err(|error| {
+        tracing::error!(reason = %error, "Invalid application configuration");
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "invalid application configuration",
+        )
+    })?;
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
@@ -27,6 +32,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })?;
 
     tracing::info!("Database connection pool established");
+
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .map_err(|error| {
+            tracing::error!(
+                error = %error,
+                "Database migrations failed"
+            );
+            error
+        })?;
+
+    tracing::info!("Database migrations completed successfully");
 
     let user_repository = auth::repository::UserRepository::new(pool.clone());
 
@@ -45,6 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let transaction_service = transaction::service::TransactionService::new(transaction_repository);
 
     let state = AppState {
+        db: pool.clone(),
         auth_service: Arc::new(auth_service),
         transaction_service: Arc::new(transaction_service),
         dashboard_service: Arc::new(dashboard_service),
@@ -63,14 +82,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .with_graceful_shutdown(async {
-        if tokio::signal::ctrl_c().await.is_ok() {
-            tracing::info!("Shutdown signal received");
-        }
-    })
+    .with_graceful_shutdown(shutdown_signal())
     .await?;
 
     tracing::info!("HTTP server stopped");
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        if let Err(error) = tokio::signal::ctrl_c().await {
+            tracing::error!(%error, "Failed to listen for Ctrl+C");
+        }
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut signal) => {
+                signal.recv().await;
+            }
+            Err(error) => {
+                tracing::error!(%error, "Failed to listen for SIGTERM");
+                std::future::pending::<()>().await;
+            }
+        }
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    tracing::info!("Shutdown signal received");
 }

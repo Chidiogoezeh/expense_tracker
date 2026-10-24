@@ -1,14 +1,3 @@
-use axum::{
-    Json, Router,
-    extract::{Extension, Path, Query, State},
-    http::StatusCode,
-    routing::{get, post},
-};
-use chrono::{DateTime, NaiveDate, Utc};
-use serde::Deserialize;
-use uuid::Uuid;
-use validator::Validate;
-
 use crate::{
     error::AppError,
     middleware::AuthUser,
@@ -21,6 +10,16 @@ use crate::{
         repository::TransactionFilters,
     },
 };
+use axum::{
+    Json, Router,
+    extract::{Extension, Path, Query, State},
+    http::StatusCode,
+    routing::{get, post},
+};
+use chrono::{DateTime, NaiveDate, Utc};
+use serde::Deserialize;
+use uuid::Uuid;
+use validator::Validate;
 
 #[derive(Debug, Deserialize)]
 pub struct ListTransactionsQuery {
@@ -47,6 +46,19 @@ pub fn routes() -> Router<AppState> {
         )
 }
 
+#[utoipa::path(
+    post,
+    path = "/transactions",
+    request_body = CreateTransactionRequest,
+    responses(
+        (status = 201, description = "Transaction created", body = TransactionResponse),
+        (status = 400, description = "Invalid transaction data", body = crate::error::ErrorResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Transactions"
+)]
 pub async fn create_transaction(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -65,6 +77,21 @@ pub async fn create_transaction(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/transactions/{id}",
+    params(
+        ("id" = Uuid, Path, description = "Transaction ID")
+    ),
+    responses(
+        (status = 200, description = "Transaction found", body = TransactionResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 404, description = "Transaction not found", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Transactions"
+)]
 pub async fn get_transaction(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -74,6 +101,26 @@ pub async fn get_transaction(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    get,
+    path = "/transactions",
+    params(
+        ("type" = Option<TransactionType>, Query, description = "Filter by INCOME or EXPENSE"),
+        ("category" = Option<String>, Query, description = "Category; maximum 50 characters"),
+        ("from" = Option<NaiveDate>, Query, description = "Inclusive start date, YYYY-MM-DD"),
+        ("to" = Option<NaiveDate>, Query, description = "Inclusive end date, YYYY-MM-DD"),
+        ("page" = Option<u32>, Query, description = "Page number, default 1, minimum 1"),
+        ("limit" = Option<u32>, Query, description = "Page size, default 20, maximum 100")
+    ),
+    responses(
+        (status = 200, description = "Paginated transaction list", body = TransactionListResponse),
+        (status = 400, description = "Invalid filter or pagination value", body = crate::error::ErrorResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Transactions"
+)]
 pub async fn list_transactions(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -143,6 +190,23 @@ pub async fn list_transactions(
     Ok(Json(TransactionListResponse { items, page, limit }))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/transactions/{id}",
+    params(
+        ("id" = Uuid, Path, description = "Transaction ID")
+    ),
+    request_body = UpdateTransactionRequest,
+    responses(
+        (status = 200, description = "Transaction updated", body = TransactionResponse),
+        (status = 400, description = "Invalid update data", body = crate::error::ErrorResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 404, description = "Transaction not found", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Transactions"
+)]
 pub async fn update_transaction(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -162,6 +226,21 @@ pub async fn update_transaction(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/transactions/{id}",
+    params(
+        ("id" = Uuid, Path, description = "Transaction ID")
+    ),
+    responses(
+        (status = 204, description = "Transaction deleted"),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 404, description = "Transaction not found", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Transactions"
+)]
 pub async fn delete_transaction(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,

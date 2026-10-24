@@ -2,9 +2,8 @@ pub mod handler;
 pub mod repository;
 pub mod service;
 
-use axum::{Router, routing::get};
-
 use crate::state::AppState;
+use axum::{Router, routing::get};
 
 pub fn routes() -> Router<AppState> {
     Router::new()

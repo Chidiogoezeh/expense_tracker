@@ -1,48 +1,66 @@
+use crate::{error::AppError, middleware::AuthUser, state::AppState};
 use axum::{
     Json,
     extract::{Extension, State},
     http::StatusCode,
 };
-
 use serde::{Deserialize, Serialize};
-
+use tracing::{info, warn};
+use utoipa::ToSchema;
 use uuid::Uuid;
-
 use validator::Validate;
 
-use tracing::{info, warn};
-
-use crate::{error::AppError, middleware::AuthUser, state::AppState};
-
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct RegisterRequest {
+    #[schema(example = "user@example.com")]
     #[validate(email)]
     pub email: String,
 
+    #[schema(example = "StrongPassword123")]
     #[validate(length(min = 8, max = 128))]
     pub password: String,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct LoginRequest {
+    #[schema(example = "user@example.com")]
     #[validate(email)]
     pub email: String,
 
+    #[schema(example = "StrongPassword123")]
     #[validate(length(min = 8, max = 128))]
     pub password: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct RegistrationResponse {
     pub id: Uuid,
     pub email: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct LoginResponse {
     pub token: String,
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct ProfileResponse {
+    pub id: Uuid,
+    pub email: String,
+}
+
+#[utoipa::path(
+    post,
+    path = "/register",
+    request_body = RegisterRequest,
+    responses(
+        (status = 201, description = "User registered", body = RegistrationResponse),
+        (status = 400, description = "Invalid registration data", body = crate::error::ErrorResponse),
+        (status = 409, description = "Email already exists", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
+    ),
+    tag = "Authentication"
+)]
 pub async fn register(
     State(state): State<AppState>,
     Json(input): Json<RegisterRequest>,
@@ -71,6 +89,18 @@ pub async fn register(
     ))
 }
 
+#[utoipa::path(
+    post,
+    path = "/login",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, description = "Login successful", body = LoginResponse),
+        (status = 400, description = "Invalid request data", body = crate::error::ErrorResponse),
+        (status = 401, description = "Invalid credentials", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
+    ),
+    tag = "Authentication"
+)]
 pub async fn login(
     State(state): State<AppState>,
     Json(input): Json<LoginRequest>,
@@ -88,12 +118,17 @@ pub async fn login(
     Ok(Json(LoginResponse { token }))
 }
 
-#[derive(Serialize)]
-pub struct ProfileResponse {
-    pub id: Uuid,
-    pub email: String,
-}
-
+#[utoipa::path(
+    get,
+    path = "/profile",
+    responses(
+        (status = 200, description = "Authenticated user profile", body = ProfileResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Authentication"
+)]
 pub async fn profile(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
