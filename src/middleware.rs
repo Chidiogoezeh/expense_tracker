@@ -1,3 +1,4 @@
+use crate::{AppState, auth::Claims, error::AppError};
 use axum::{
     extract::{Request, State},
     middleware::Next,
@@ -5,7 +6,6 @@ use axum::{
 };
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 use uuid::Uuid;
-use crate::{AppState, auth::Claims, error::AppError};
 
 #[derive(Clone)]
 pub struct AuthUser {
