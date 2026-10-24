@@ -1,10 +1,11 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, ToSchema)]
 pub enum TransactionType {
     #[serde(rename = "INCOME")]
     Income,
@@ -91,7 +92,7 @@ fn default_currency() -> String {
     "NGN".to_owned()
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct CreateTransactionRequest {
     #[validate(custom(function = "validate_description"))]
     pub description: String,
@@ -112,7 +113,7 @@ pub struct CreateTransactionRequest {
     pub occurred_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct UpdateTransactionRequest {
     #[validate(custom(function = "validate_description"))]
     pub description: Option<String>,
@@ -132,7 +133,7 @@ pub struct UpdateTransactionRequest {
     pub occurred_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct TransactionResponse {
     pub id: Uuid,
 
@@ -147,7 +148,7 @@ pub struct TransactionResponse {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct TransactionListResponse {
     pub items: Vec<TransactionResponse>,
     pub page: u32,

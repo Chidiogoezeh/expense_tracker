@@ -1,7 +1,3 @@
-use bigdecimal::BigDecimal;
-use chrono::Utc;
-use uuid::Uuid;
-
 use crate::{
     error::AppError,
     transaction::{
@@ -14,6 +10,9 @@ use crate::{
         },
     },
 };
+use bigdecimal::BigDecimal;
+use chrono::Utc;
+use uuid::Uuid;
 
 pub struct TransactionService {
     repository: TransactionRepository,
