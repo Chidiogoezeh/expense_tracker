@@ -43,6 +43,25 @@ pub struct LoginResponse {
     pub token: String,
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct ProfileResponse {
+    pub id: Uuid,
+    pub email: String,
+}
+
+#[utoipa::path(
+    post,
+    path = "/register",
+    request_body = RegisterRequest,
+    responses(
+        (status = 201, description = "User registered", body = RegistrationResponse),
+        (status = 400, description = "Invalid registration data"),
+        (status = 409, description = "Email already exists"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Authentication"
+)]
+
 pub async fn register(
     State(state): State<AppState>,
     Json(input): Json<RegisterRequest>,
@@ -71,6 +90,19 @@ pub async fn register(
     ))
 }
 
+#[utoipa::path(
+    post,
+    path = "/login",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, description = "Login successful", body = LoginResponse),
+        (status = 400, description = "Invalid request data"),
+        (status = 401, description = "Invalid credentials"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Authentication"
+)]
+
 pub async fn login(
     State(state): State<AppState>,
     Json(input): Json<LoginRequest>,
@@ -88,11 +120,17 @@ pub async fn login(
     Ok(Json(LoginResponse { token }))
 }
 
-#[derive(Serialize, ToSchema)]
-pub struct ProfileResponse {
-    pub id: Uuid,
-    pub email: String,
-}
+#[utoipa::path(
+    get,
+    path = "/profile",
+    responses(
+        (status = 200, description = "Authenticated user profile", body = ProfileResponse),
+        (status = 401, description = "Authentication required"),
+        (status = 500, description = "Internal server error")
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Authentication"
+)]
 
 pub async fn profile(
     State(state): State<AppState>,
