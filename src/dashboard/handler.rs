@@ -24,9 +24,9 @@ pub struct ReportQuery {
     ),
     responses(
         (status = 200, description = "Financial summary", body = super::service::DashboardSummary),
-        (status = 400, description = "Invalid date range or currency"),
-        (status = 401, description = "Authentication required"),
-        (status = 500, description = "Internal server error")
+        (status = 400, description = "Invalid date range or currency", body = crate::error::ErrorResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     security(("bearer_auth" = [])),
     tag = "Reports"
@@ -54,9 +54,9 @@ pub async fn summary(
     ),
     responses(
         (status = 200, description = "Expense totals grouped by category", body = [super::service::CategoryReportItem]),
-        (status = 400, description = "Invalid date range or currency"),
-        (status = 401, description = "Authentication required"),
-        (status = 500, description = "Internal server error")
+        (status = 400, description = "Invalid date range or currency", body = crate::error::ErrorResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     security(("bearer_auth" = [])),
     tag = "Reports"

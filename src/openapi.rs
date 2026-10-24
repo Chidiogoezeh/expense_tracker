@@ -54,7 +54,9 @@ impl Modify for SecurityAddon {
             crate::budget::handler::UpdateBudgetRequest,
             crate::budget::service::BudgetResponse,
             crate::dashboard::service::DashboardSummary,
-            crate::dashboard::service::CategoryReportItem
+            crate::dashboard::service::CategoryReportItem,
+            crate::error::ErrorResponse,
+            crate::error::ErrorBody
         )
     ),
     modifiers(&SecurityAddon),

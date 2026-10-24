@@ -52,9 +52,9 @@ pub fn routes() -> Router<AppState> {
     request_body = CreateTransactionRequest,
     responses(
         (status = 201, description = "Transaction created", body = TransactionResponse),
-        (status = 400, description = "Invalid transaction data"),
-        (status = 401, description = "Authentication required"),
-        (status = 500, description = "Internal server error")
+        (status = 400, description = "Invalid transaction data", body = crate::error::ErrorResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     security(("bearer_auth" = [])),
     tag = "Transactions"
@@ -85,9 +85,9 @@ pub async fn create_transaction(
     ),
     responses(
         (status = 200, description = "Transaction found", body = TransactionResponse),
-        (status = 401, description = "Authentication required"),
-        (status = 404, description = "Transaction not found"),
-        (status = 500, description = "Internal server error")
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 404, description = "Transaction not found", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     security(("bearer_auth" = [])),
     tag = "Transactions"
@@ -114,9 +114,9 @@ pub async fn get_transaction(
     ),
     responses(
         (status = 200, description = "Paginated transaction list", body = TransactionListResponse),
-        (status = 400, description = "Invalid filter or pagination value"),
-        (status = 401, description = "Authentication required"),
-        (status = 500, description = "Internal server error")
+        (status = 400, description = "Invalid filter or pagination value", body = crate::error::ErrorResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     security(("bearer_auth" = [])),
     tag = "Transactions"
@@ -199,10 +199,10 @@ pub async fn list_transactions(
     request_body = UpdateTransactionRequest,
     responses(
         (status = 200, description = "Transaction updated", body = TransactionResponse),
-        (status = 400, description = "Invalid update data"),
-        (status = 401, description = "Authentication required"),
-        (status = 404, description = "Transaction not found"),
-        (status = 500, description = "Internal server error")
+        (status = 400, description = "Invalid update data", body = crate::error::ErrorResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 404, description = "Transaction not found", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     security(("bearer_auth" = [])),
     tag = "Transactions"
@@ -234,9 +234,9 @@ pub async fn update_transaction(
     ),
     responses(
         (status = 204, description = "Transaction deleted"),
-        (status = 401, description = "Authentication required"),
-        (status = 404, description = "Transaction not found"),
-        (status = 500, description = "Internal server error")
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 404, description = "Transaction not found", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     security(("bearer_auth" = [])),
     tag = "Transactions"

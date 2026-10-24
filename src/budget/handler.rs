@@ -31,8 +31,8 @@ pub struct UpdateBudgetRequest {
     path = "/budgets",
     responses(
         (status = 200, description = "User's budgets", body = [super::service::BudgetResponse]),
-        (status = 401, description = "Authentication required"),
-        (status = 500, description = "Internal server error")
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     security(("bearer_auth" = [])),
     tag = "Budgets"
@@ -50,10 +50,10 @@ pub async fn list(
     request_body = CreateBudgetRequest,
     responses(
         (status = 201, description = "Budget created", body = super::service::BudgetResponse),
-        (status = 400, description = "Invalid budget data"),
-        (status = 401, description = "Authentication required"),
-        (status = 409, description = "Budget conflicts with an existing budget"),
-        (status = 500, description = "Internal server error")
+        (status = 400, description = "Invalid budget data", body = crate::error::ErrorResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 409, description = "Budget conflicts with an existing budget", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     security(("bearer_auth" = [])),
     tag = "Budgets"
@@ -88,10 +88,10 @@ pub async fn create(
     request_body = UpdateBudgetRequest,
     responses(
         (status = 200, description = "Budget updated", body = super::service::BudgetResponse),
-        (status = 400, description = "Invalid budget data"),
-        (status = 401, description = "Authentication required"),
-        (status = 404, description = "Budget not found"),
-        (status = 500, description = "Internal server error")
+        (status = 400, description = "Invalid budget data", body = crate::error::ErrorResponse),
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 404, description = "Budget not found", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     security(("bearer_auth" = [])),
     tag = "Budgets"
@@ -127,9 +127,9 @@ pub async fn update(
     ),
     responses(
         (status = 204, description = "Budget deleted"),
-        (status = 401, description = "Authentication required"),
-        (status = 404, description = "Budget not found"),
-        (status = 500, description = "Internal server error")
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 404, description = "Budget not found", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     security(("bearer_auth" = [])),
     tag = "Budgets"

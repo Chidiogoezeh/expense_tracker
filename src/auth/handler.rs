@@ -55,9 +55,9 @@ pub struct ProfileResponse {
     request_body = RegisterRequest,
     responses(
         (status = 201, description = "User registered", body = RegistrationResponse),
-        (status = 400, description = "Invalid registration data"),
-        (status = 409, description = "Email already exists"),
-        (status = 500, description = "Internal server error")
+        (status = 400, description = "Invalid registration data", body = crate::error::ErrorResponse),
+        (status = 409, description = "Email already exists", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     tag = "Authentication"
 )]
@@ -95,9 +95,9 @@ pub async fn register(
     request_body = LoginRequest,
     responses(
         (status = 200, description = "Login successful", body = LoginResponse),
-        (status = 400, description = "Invalid request data"),
-        (status = 401, description = "Invalid credentials"),
-        (status = 500, description = "Internal server error")
+        (status = 400, description = "Invalid request data", body = crate::error::ErrorResponse),
+        (status = 401, description = "Invalid credentials", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     tag = "Authentication"
 )]
@@ -123,8 +123,8 @@ pub async fn login(
     path = "/profile",
     responses(
         (status = 200, description = "Authenticated user profile", body = ProfileResponse),
-        (status = 401, description = "Authentication required"),
-        (status = 500, description = "Internal server error")
+        (status = 401, description = "Authentication required", body = crate::error::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::error::ErrorResponse)
     ),
     security(("bearer_auth" = [])),
     tag = "Authentication"
