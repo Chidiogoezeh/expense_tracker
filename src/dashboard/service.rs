@@ -1,11 +1,10 @@
+use super::repository::{CategoryTotalRow, DashboardRepository, SummaryRow};
+use crate::error::AppError;
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
-use uuid::Uuid;
-
-use crate::error::AppError;
 use serde::Serialize;
-
-use super::repository::{CategoryTotalRow, DashboardRepository, SummaryRow};
+use utoipa::ToSchema;
+use uuid::Uuid;
 
 const DEFAULT_CURRENCY: &str = "NGN";
 
@@ -13,7 +12,7 @@ pub struct DashboardService {
     repository: DashboardRepository,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct DashboardSummary {
     pub currency: String,
     pub income: String,
@@ -21,7 +20,7 @@ pub struct DashboardSummary {
     pub net_cash_flow: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct CategoryReportItem {
     pub category: String,
     pub total: String,
@@ -116,8 +115,7 @@ fn build_category_item(row: CategoryTotalRow) -> CategoryReportItem {
     }
 }
 
-// Preserve the database's decimal value. Trim unnecessary trailing zeroes,
-// but always return at least two fractional digits.
+// Preserve the database's decimal value. Trim unnecessary trailing zeroes,but always return at least two fractional digits.
 fn format_money(value: BigDecimal) -> String {
     let mut value = value.to_string();
 

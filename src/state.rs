@@ -1,11 +1,9 @@
-use std::sync::Arc;
-
-use sqlx::PgPool;
-
 use crate::{
     auth::service::AuthService, budget::service::BudgetService,
     dashboard::service::DashboardService, transaction::service::TransactionService,
 };
+use sqlx::PgPool;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AppState {

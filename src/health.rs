@@ -1,8 +1,7 @@
+use crate::AppState;
 use axum::{extract::State, http::StatusCode};
 use sqlx::query_scalar;
 use tracing::warn;
-
-use crate::AppState;
 
 pub async fn health(State(state): State<AppState>) -> StatusCode {
     match query_scalar::<_, i32>("SELECT 1")
