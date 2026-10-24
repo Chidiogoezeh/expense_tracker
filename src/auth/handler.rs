@@ -61,7 +61,6 @@ pub struct ProfileResponse {
     ),
     tag = "Authentication"
 )]
-
 pub async fn register(
     State(state): State<AppState>,
     Json(input): Json<RegisterRequest>,
@@ -102,7 +101,6 @@ pub async fn register(
     ),
     tag = "Authentication"
 )]
-
 pub async fn login(
     State(state): State<AppState>,
     Json(input): Json<LoginRequest>,
@@ -131,7 +129,6 @@ pub async fn login(
     security(("bearer_auth" = [])),
     tag = "Authentication"
 )]
-
 pub async fn profile(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,

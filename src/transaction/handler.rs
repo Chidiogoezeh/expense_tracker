@@ -59,7 +59,6 @@ pub fn routes() -> Router<AppState> {
     security(("bearer_auth" = [])),
     tag = "Transactions"
 )]
-
 pub async fn create_transaction(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -93,7 +92,6 @@ pub async fn create_transaction(
     security(("bearer_auth" = [])),
     tag = "Transactions"
 )]
-
 pub async fn get_transaction(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -123,7 +121,6 @@ pub async fn get_transaction(
     security(("bearer_auth" = [])),
     tag = "Transactions"
 )]
-
 pub async fn list_transactions(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -210,7 +207,6 @@ pub async fn list_transactions(
     security(("bearer_auth" = [])),
     tag = "Transactions"
 )]
-
 pub async fn update_transaction(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -245,7 +241,6 @@ pub async fn update_transaction(
     security(("bearer_auth" = [])),
     tag = "Transactions"
 )]
-
 pub async fn delete_transaction(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,

@@ -1,9 +1,8 @@
+use crate::error::AppError;
 use bigdecimal::BigDecimal;
 use chrono::{NaiveDate, Utc};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
-
-use crate::error::AppError;
 
 #[derive(Clone)]
 pub struct BudgetRepository {

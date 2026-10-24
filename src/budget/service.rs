@@ -1,18 +1,17 @@
+use super::repository::{BudgetRepository, BudgetWithSpendingRow};
+use crate::error::AppError;
 use bigdecimal::{BigDecimal, ToPrimitive};
 use chrono::{Datelike, NaiveDate};
 use serde::Serialize;
 use std::str::FromStr;
+use utoipa::ToSchema;
 use uuid::Uuid;
-
-use crate::error::AppError;
-
-use super::repository::{BudgetRepository, BudgetWithSpendingRow};
 
 pub struct BudgetService {
     repository: BudgetRepository,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct BudgetResponse {
     pub id: Uuid,
     pub category: String,
