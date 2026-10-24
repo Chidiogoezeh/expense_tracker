@@ -1,18 +1,14 @@
-use argon2::{
-    Argon2,
-    password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
-};
-
-use std::sync::OnceLock;
-
-use jsonwebtoken::{Algorithm, EncodingKey, Header, encode, get_current_timestamp};
-
-use uuid::Uuid;
-
 use crate::{
     auth::{Claims, repository::UserRepository},
     error::AppError,
 };
+use argon2::{
+    Argon2,
+    password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
+};
+use jsonwebtoken::{Algorithm, EncodingKey, Header, encode, get_current_timestamp};
+use std::sync::OnceLock;
+use uuid::Uuid;
 
 pub struct AuthService {
     repository: UserRepository,
