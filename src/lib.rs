@@ -16,6 +16,8 @@ use axum::{
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::trace::TraceLayer;
 use tracing::Level;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 pub use state::AppState;
 
@@ -53,7 +55,7 @@ pub fn build_app(state: AppState) -> Router {
             middleware::auth_middleware,
         ));
 
-    register_route
+    let app = register_route
         .merge(login_route)
         .merge(protected_routes)
         .layer(
@@ -67,5 +69,10 @@ pub fn build_app(state: AppState) -> Router {
                 })
                 .on_response(tower_http::trace::DefaultOnResponse::new().level(Level::INFO)),
         )
-        .with_state(state)
+        .with_state(state);
+
+    app.merge(
+        SwaggerUi::new("/swagger-ui")
+            .url("/api-docs/openapi.json", crate::openapi::ApiDoc::openapi()),
+    )
 }
